@@ -60,12 +60,12 @@ public class CBPublicData {
             ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond((long) bar[0]), ZoneId.systemDefault());
             zonedDateTime = zonedDateTime.plusDays(1); // TODO: base on granularity
 
-            try {
-                barSeries.addBar(zonedDateTime, bar[3], bar[2], bar[1], bar[4], bar[5]);
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-                // NOTHING; TODO: find out why exception is being generated here
-            }
+            double open = bar[3];
+            double high = bar[2];
+            double low = bar[1];
+            double close = bar[4];
+            double volume = bar[5];
+            barSeries.addBar(zonedDateTime, open, high, low, close, volume);
         }
 
         return barSeries;
