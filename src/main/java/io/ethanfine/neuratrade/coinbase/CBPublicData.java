@@ -58,7 +58,20 @@ public class CBPublicData {
         double[][] bars = Util.stringToDeep(get_response);
         for (double[] bar : bars) {
             ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond((long) bar[0]), ZoneId.systemDefault());
-            zonedDateTime = zonedDateTime.plusDays(1); // TODO: base on granularity
+            switch (timeGranularity) {
+                case MINUTE:
+                    zonedDateTime = zonedDateTime.plusMinutes(1);
+                case MINUTE_FIVE:
+                    zonedDateTime = zonedDateTime.plusMinutes(5);
+                case MINUTE_FIFTEEN:
+                    zonedDateTime = zonedDateTime.plusMinutes(15);
+                case HOUR:
+                    zonedDateTime = zonedDateTime.plusHours(1);
+                case HOUR_SIX:
+                    zonedDateTime = zonedDateTime.plusHours(6);
+                case DAY:
+                    zonedDateTime = zonedDateTime.plusDays(1);
+            }
 
             double open = bar[3];
             double high = bar[2];
