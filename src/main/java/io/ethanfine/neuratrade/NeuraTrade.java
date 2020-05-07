@@ -3,6 +3,7 @@ package io.ethanfine.neuratrade;
 import io.ethanfine.neuratrade.coinbase.CBProduct;
 import io.ethanfine.neuratrade.coinbase.CBPublicData;
 import io.ethanfine.neuratrade.coinbase.CBTimeGranularity;
+import io.ethanfine.neuratrade.ui.UserInterfaceMain;
 import org.ta4j.core.Bar;
 import org.ta4j.core.BarSeries;
 
@@ -18,6 +19,8 @@ public class NeuraTrade {
         } catch (Exception exception) {
             System.out.println("Failed to retrieve BTC bar series.");
         }
+
+        new UserInterfaceMain();
     }
 
 }

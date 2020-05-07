@@ -34,14 +34,13 @@ public class CBPublicData {
         }
     }
 
-    public static BaseBar getTicker(CBProduct product) throws Exception {
+    public static double getTickerPrice(CBProduct product) throws Exception {
         String cbAPIEndPtUrlString = Constants.CB_API_URL + Constants.CB_API_ENDPOINT_TICKER(product);
         String get_response = NetworkingManager.performGetRequest(cbAPIEndPtUrlString);
         try {
             JSONParser parser = new JSONParser();
             JSONObject jObj = (JSONObject) parser.parse(get_response);
-            // TODO: create ticker bar
-            return null;
+            return Double.parseDouble((String) jObj.get("price"));
         } catch (Exception e) {
             throw new NetworkRequestException("Failed to parse response from request with URL " + cbAPIEndPtUrlString);
         }
@@ -64,6 +63,7 @@ public class CBPublicData {
             try {
                 barSeries.addBar(zonedDateTime, bar[3], bar[2], bar[1], bar[4], bar[5]);
             } catch (Exception e) {
+                System.out.println(e.getMessage());
                 // NOTHING; TODO: find out why exception is being generated here
             }
         }

@@ -3,6 +3,7 @@ package io.ethanfine.neuratrade.util;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 
 public class Util {
@@ -36,6 +37,7 @@ public class Util {
                 }
                 groupedValues.add(innerArrayVals);
             }
+            Collections.reverse(groupedValues); // Returned from newest to oldest, want reverse order most of the time and Bar
 
             double[][] deep = new double[groupedValues.size()][innerArraysLen];
             for (int i = 0; i < deep.length; i++) {
