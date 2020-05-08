@@ -163,7 +163,7 @@ public class UIMain implements ActionListener {
         double high = barDataSeries.getBarDataPointWithHighestHigh().bar.getHighPrice().doubleValue();
         double rangeLow = low + (10 - low % 10);
         double rangeHigh = high + (10 - high % 10);
-        priceRange.setRange(rangeLow, rangeHigh); 
+        priceRange.setRange(rangeLow, rangeHigh);
         priceRange.setTickUnit(new NumberTickUnit((rangeHigh - rangeLow) / 5));
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
         renderer.setSeriesPaint(0, Color.BLUE);

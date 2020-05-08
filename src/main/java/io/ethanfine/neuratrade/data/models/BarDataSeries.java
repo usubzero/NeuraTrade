@@ -89,20 +89,18 @@ public class BarDataSeries {
     public void labelBarActions(double percentGainThreshold, double percentLossThreshold) { // TODO: base thresholds on granularity and volatility
         for (int i = 0; i < getBarCount(); i++) {
             BarDataPoint bdpI = getBarDataPoint(i);
-            for (int y = 1; y < 10; y++) {
+            for (int y = 10; y > 0; y--) {
                 if (i + y >= getBarCount()) {
                     continue;
                 }
                 Bar barY = barSeries.getBar(i + y);
                 if (barY.getHighPrice().doubleValue() > bdpI.bar.getLowPrice().doubleValue()) { // Bullish
                     double potentialGain = ((barY.getHighPrice().doubleValue() - bdpI.bar.getLowPrice().doubleValue()) / bdpI.bar.getLowPrice().doubleValue()) * 100;
-                    System.out.println(potentialGain);
                     if (potentialGain >= percentGainThreshold) {
                         bdpI.barAction = BarAction.BUY;
                     }
                 } else { // Bearish
                     double potentialLoss = Math.abs(((barY.getLowPrice().doubleValue() - bdpI.bar.getHighPrice().doubleValue())) / bdpI.bar.getHighPrice().doubleValue()) * 100;
-                    System.out.println(potentialLoss);
                     if (potentialLoss >= percentLossThreshold) {
                         bdpI.barAction = BarAction.SELL;
                     }
