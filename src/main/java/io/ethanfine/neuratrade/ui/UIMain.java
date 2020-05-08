@@ -55,8 +55,9 @@ public class UIMain implements ActionListener {
 
         try {
             int barCount = 100;
-            BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, barCount, CBTimeGranularity.MINUTE_FIFTEEN);
+            BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, barCount, CBTimeGranularity.HOUR);
             BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries);
+            recentBarDataSeries.labelBarActions(1, 0.3);
             initiateChart(recentBarDataSeries);
         } catch (Exception e) {
             // TODO
@@ -110,7 +111,6 @@ public class UIMain implements ActionListener {
 
     private XYDataset createTrainingChartDataset(BarDataSeries barDataSeries) {
         try {
-            barDataSeries.labelBarActions(1, 0.5);
             XYSeries priceSeries = new XYSeries(barDataSeries.product.productName + " Price");
             XYSeries buySeries = new XYSeries(barDataSeries.product.productName + " Buys");
             XYSeries sellSeries = new XYSeries(barDataSeries.product.productName + " Sells");
