@@ -36,7 +36,9 @@ public class UIMain implements ActionListener {
     ChartPanel chartPanel;
     JLabel priceLabel;
     JLabel rsiLabel;
+    JPanel parametersPanel;
     JComboBox productSelector;
+    JComboBox granularitySelector;
 
     public UIMain() {
         frame = new JFrame("NeuraTrade");
@@ -51,13 +53,13 @@ public class UIMain implements ActionListener {
     private void loadFrameContent() {
         loadTickerPriceLabel();
         loadRSILabel();
-        loadProductSelector();
+        loadParametersPanel();
 
         try {
             int barCount = 100;
-            BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, barCount, CBTimeGranularity.HOUR_SIX);
+            BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, barCount, Config.shared.timeGranularity);
             BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries);
-            recentBarDataSeries.labelBarActions(1, 0.3);
+            recentBarDataSeries.labelBarActions(0.75, 0.75);
             initiateChart(recentBarDataSeries);
         } catch (Exception e) {
             // TODO
@@ -85,7 +87,7 @@ public class UIMain implements ActionListener {
         boolean errorRetrievingRecentBars = false;
         try {
             int barCount = 300;
-            BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, barCount, CBTimeGranularity.HOUR_SIX);
+            BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, barCount, Config.shared.timeGranularity);
             ClosePriceIndicator closePrice = new ClosePriceIndicator(recentBarSeries);
             RSIIndicator rsiIndicator = new RSIIndicator(closePrice, Config.shared.rsiCalculationTickCount);
             rsi = rsiIndicator.getValue(barCount - 1).doubleValue();
@@ -97,6 +99,28 @@ public class UIMain implements ActionListener {
         rsiLabel.setVerticalTextPosition(JLabel.BOTTOM);
         rsiLabel.setHorizontalTextPosition(JLabel.CENTER);
         frame.add(rsiLabel, BorderLayout.EAST);
+    }
+
+    private void loadParametersPanel() {
+        parametersPanel = new JPanel();
+        parametersPanel.setPreferredSize(new Dimension(400, 40));
+        frame.getContentPane().add(parametersPanel, BorderLayout.SOUTH);
+        loadProductSelector();
+        loadGranularitySelector();
+    }
+
+    private void loadProductSelector() {
+        productSelector = new JComboBox(CBProduct.values());
+        productSelector.setSelectedIndex(0);
+        productSelector.addActionListener(this);
+        parametersPanel.add(productSelector, BorderLayout.CENTER);
+    }
+
+    private void loadGranularitySelector() {
+        granularitySelector = new JComboBox(CBTimeGranularity.values());
+        granularitySelector.setSelectedIndex(3);
+        granularitySelector.addActionListener(this);
+        parametersPanel.add(granularitySelector, BorderLayout.EAST);
     }
 
     private void initiateChart(BarDataSeries barDataSeries) {
@@ -194,7 +218,7 @@ public class UIMain implements ActionListener {
                     String newLabelTitle = "$" + CBPublicData.getTickerPrice(Config.shared.product);
                     priceLabel.setText(newLabelTitle);
 
-                    BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, 300, CBTimeGranularity.MINUTE);
+                    BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, 300, Config.shared.timeGranularity);
                     ClosePriceIndicator closePrice = new ClosePriceIndicator(recentBarSeries);
                     RSIIndicator rsiIndicator = new RSIIndicator(closePrice, Config.shared.rsiCalculationTickCount);
                     double rsi = rsiIndicator.getValue(299).doubleValue();
@@ -202,7 +226,7 @@ public class UIMain implements ActionListener {
                     rsiLabel.setText(rsiLabelTitle);
 
                     BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries);
-                    recentBarDataSeries.labelBarActions(0.3, 0.3);
+                    recentBarDataSeries.labelBarActions(0.75, 0.75);
 
                     if (chartPanel != null) {
                         frame.remove(chartPanel);
@@ -216,18 +240,14 @@ public class UIMain implements ActionListener {
         }).start();
     }
 
-    private void loadProductSelector() {
-        productSelector = new JComboBox(CBProduct.values());
-        productSelector.setSelectedIndex(0);
-        productSelector.addActionListener(this);
-        frame.getContentPane().add(productSelector, BorderLayout.SOUTH);
-    }
-
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (e.getSource() instanceof JComboBox) {
+        if (e.getSource() == productSelector) {
             CBProduct newProduct = (CBProduct) productSelector.getSelectedItem();
             Config.shared.product = newProduct;
+        } else if (e.getSource() == granularitySelector) {
+            CBTimeGranularity newGranularity = (CBTimeGranularity) granularitySelector.getSelectedItem();
+            Config.shared.timeGranularity = newGranularity;
         }
     }
 }

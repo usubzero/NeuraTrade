@@ -108,6 +108,7 @@ public class BarDataSeries {
             }
         }
 
+        // Below is less greedy than new implementation beneath
         for (int i = 1; i < getBarCount(); i++) {
             BarDataPoint bdpBefore = getBarDataPoint(i - 1);
             BarDataPoint bdp = getBarDataPoint(i);
@@ -119,6 +120,42 @@ public class BarDataSeries {
                 }
             }
         }
+
+//        int nextActionI = -1;
+//        for (int i = 0; i < getBarCount(); i++) {
+//            BarDataPoint bdpI = getBarDataPoint(i);
+//            if (bdpI.barAction == BarAction.HOLD || i < nextActionI) continue;
+//
+//            BarAction iAction = bdpI.barAction;
+//            BarAction nextAction = (iAction == BarAction.BUY) ? BarAction.SELL : BarAction.BUY;
+////            int nextActionI = -1;
+//            BarDataPoint greatestProfitPoint = bdpI;
+//            for (int y = i + 1; y < getBarCount(); y++) {
+//                BarDataPoint bdpY = getBarDataPoint(y);
+//                if (bdpY.barAction == BarAction.HOLD) continue;
+//                if (bdpY.barAction == nextAction) {
+//                    nextActionI = y;
+//                    break;
+//                }
+//
+//                double greatestProfitPointHigh = greatestProfitPoint.bar.getHighPrice().doubleValue();
+//                double greatestProfitPointLow = greatestProfitPoint.bar.getLowPrice().doubleValue();
+//                if (iAction == BarAction.BUY && bdpY.bar.getLowPrice().doubleValue() < greatestProfitPointLow) {
+//                    greatestProfitPoint = bdpY;
+//                } else if (nextAction == BarAction.SELL && bdpY.bar.getHighPrice().doubleValue() > greatestProfitPointHigh) {
+//                    greatestProfitPoint = bdpY;
+//                }
+//            }
+//
+//            if (nextActionI == -1) continue;
+//
+//            for (int y = i; y < nextActionI; y++) {
+//                BarDataPoint bdpY = getBarDataPoint(y);
+//                if (bdpY.barAction == iAction && bdpY != greatestProfitPoint) {
+//                    bdpY.barAction = BarAction.HOLD;
+//                }
+//            }
+//        }
     }
 
     public ArrayList<BarDataPoint> getDataPointsForBarAction(BarAction barAction) {
