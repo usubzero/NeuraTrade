@@ -55,7 +55,7 @@ public class UIMain implements ActionListener {
 
         try {
             int barCount = 100;
-            BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, barCount, CBTimeGranularity.HOUR);
+            BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, barCount, CBTimeGranularity.HOUR_SIX);
             BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries);
             recentBarDataSeries.labelBarActions(1, 0.3);
             initiateChart(recentBarDataSeries);
@@ -85,7 +85,7 @@ public class UIMain implements ActionListener {
         boolean errorRetrievingRecentBars = false;
         try {
             int barCount = 300;
-            BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, barCount, CBTimeGranularity.MINUTE);
+            BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, barCount, CBTimeGranularity.HOUR_SIX);
             ClosePriceIndicator closePrice = new ClosePriceIndicator(recentBarSeries);
             RSIIndicator rsiIndicator = new RSIIndicator(closePrice, Config.shared.rsiCalculationTickCount);
             rsi = rsiIndicator.getValue(barCount - 1).doubleValue();
@@ -118,13 +118,18 @@ public class UIMain implements ActionListener {
             ArrayList<BarDataPoint> sellBars = barDataSeries.getDataPointsForBarAction(BarAction.SELL);
             for (int i = 0; i < barDataSeries.getBarCount(); i++) {
                 BarDataPoint barDPI = barDataSeries.getBarDataPoint(i);
-                double closePrice = barDPI.bar.getClosePrice().doubleValue();
-                priceSeries.add(i, closePrice);
-                if (buyBars.contains(barDPI)) {
-                    buySeries.add(i, closePrice - 15); // TODO: make offset relative to price
-                }
-                if (sellBars.contains(barDPI)) {
-                    sellSeries.add(i, closePrice + 15); // TODO: make offset relative to price
+                if (barDPI.bar.isBullish()) {
+                    double lowPrice = barDPI.bar.getLowPrice().doubleValue();
+                    priceSeries.add(i, lowPrice);
+                    if (buyBars.contains(barDPI)) {
+                        buySeries.add(i, lowPrice);
+                    }
+                } else {
+                    double highPrice = barDPI.bar.getHighPrice().doubleValue();
+                    priceSeries.add(i, highPrice);
+                    if (sellBars.contains(barDPI)) {
+                        sellSeries.add(i, highPrice);
+                    }
                 }
             }
 
@@ -156,8 +161,10 @@ public class UIMain implements ActionListener {
         NumberAxis priceRange = (NumberAxis) plot.getRangeAxis();
         double low = barDataSeries.getBarDataPointWithLowestLow().bar.getLowPrice().doubleValue();
         double high = barDataSeries.getBarDataPointWithHighestHigh().bar.getHighPrice().doubleValue();
-        priceRange.setRange(low, high); // TODO: set range ends to be multiples of 10
-        priceRange.setTickUnit(new NumberTickUnit((high - low) / 5));
+        double rangeLow = low + (10 - low % 10);
+        double rangeHigh = high + (10 - high % 10);
+        priceRange.setRange(rangeLow, rangeHigh); 
+        priceRange.setTickUnit(new NumberTickUnit((rangeHigh - rangeLow) / 5));
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
         renderer.setSeriesPaint(0, Color.BLUE);
         renderer.setSeriesStroke(0, new BasicStroke(1.0f));
@@ -187,12 +194,20 @@ public class UIMain implements ActionListener {
                     String newLabelTitle = "$" + CBPublicData.getTickerPrice(Config.shared.product);
                     priceLabel.setText(newLabelTitle);
 
-                    BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(CBProduct.BTCUSD, 300, CBTimeGranularity.MINUTE);
+                    BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, 300, CBTimeGranularity.MINUTE);
                     ClosePriceIndicator closePrice = new ClosePriceIndicator(recentBarSeries);
                     RSIIndicator rsiIndicator = new RSIIndicator(closePrice, Config.shared.rsiCalculationTickCount);
                     double rsi = rsiIndicator.getValue(299).doubleValue();
                     String rsiLabelTitle = "RSI:" + rsi;
                     rsiLabel.setText(rsiLabelTitle);
+
+                    BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries);
+                    recentBarDataSeries.labelBarActions(0.3, 0.3);
+
+                    if (chartPanel != null) {
+                        frame.remove(chartPanel);
+                    }
+                    initiateChart(recentBarDataSeries); // TODO: update chart if parameters haven't changed rather than regenerating
                 } catch (Exception e) {
                     priceLabel.setText("PRICE RETRIEVAL ERROR");
                     rsiLabel.setText("RSI RETRIEVAL ERROR");
