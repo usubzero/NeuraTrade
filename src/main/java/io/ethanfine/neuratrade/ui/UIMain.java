@@ -7,6 +7,7 @@ import io.ethanfine.neuratrade.coinbase.CBTimeGranularity;
 import io.ethanfine.neuratrade.data.models.BarAction;
 import io.ethanfine.neuratrade.data.models.BarDataPoint;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
+import io.ethanfine.neuratrade.ui.models.ChartBarCount;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -29,6 +30,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class UIMain implements ActionListener {
 
@@ -39,6 +41,7 @@ public class UIMain implements ActionListener {
     JPanel parametersPanel;
     JComboBox productSelector;
     JComboBox granularitySelector;
+    JComboBox barCountSelector;
 
     public UIMain() {
         frame = new JFrame("NeuraTrade");
@@ -55,27 +58,16 @@ public class UIMain implements ActionListener {
         loadRSILabel();
         loadParametersPanel();
 
-        try {
-            int barCount = 100;
-            BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, barCount, Config.shared.timeGranularity);
-            BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries);
-            recentBarDataSeries.labelBarActions(0.75, 0.75);
-            initiateChart(recentBarDataSeries);
-        } catch (Exception e) {
-            // TODO
-        }
+        BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, Config.shared.chartBarCount.value, Config.shared.timeGranularity);
+        BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries);
+        initiateChart(recentBarDataSeries);
+
         beginRefreshCycle();
     }
 
     private void loadTickerPriceLabel() {
-        double tickerPrice = 0;
-        boolean errorRetrievingTickerPrice = false;
-        try {
-            tickerPrice = CBPublicData.getTickerPrice(Config.shared.product);
-        } catch (Exception e) {
-            errorRetrievingTickerPrice = true;
-        }
-        String labelTitle = errorRetrievingTickerPrice ? "PRICE RETRIEVAL ERROR" : "$" + tickerPrice;
+        Double tickerPrice = CBPublicData.getTickerPrice(Config.shared.product);
+        String labelTitle = tickerPrice == null ? "PRICE RETRIEVAL ERROR" : "$" + tickerPrice;
         priceLabel = new JLabel(labelTitle, JLabel.CENTER);
         priceLabel.setVerticalTextPosition(JLabel.BOTTOM);
         priceLabel.setHorizontalTextPosition(JLabel.CENTER);
@@ -83,18 +75,11 @@ public class UIMain implements ActionListener {
     }
 
     private void loadRSILabel() {
-        double rsi = 0.0;
-        boolean errorRetrievingRecentBars = false;
-        try {
-            int barCount = 300;
-            BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, barCount, Config.shared.timeGranularity);
-            ClosePriceIndicator closePrice = new ClosePriceIndicator(recentBarSeries);
-            RSIIndicator rsiIndicator = new RSIIndicator(closePrice, Config.shared.rsiCalculationTickCount);
-            rsi = rsiIndicator.getValue(barCount - 1).doubleValue();
-        } catch (Exception e) {
-            errorRetrievingRecentBars = true;
-        }
-        String labelTitle = errorRetrievingRecentBars ? "RSI RETRIEVAL ERROR" : "RSI:" + rsi;
+        BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, Config.shared.chartBarCount.value, Config.shared.timeGranularity);
+        ClosePriceIndicator closePrice = new ClosePriceIndicator(recentBarSeries);
+        RSIIndicator rsiIndicator = new RSIIndicator(closePrice, Config.shared.rsiCalculationTickCount);
+        double rsi = rsiIndicator.getValue(Config.shared.chartBarCount.value - 1).doubleValue();
+        String labelTitle = recentBarSeries.isEmpty() ? "RSI RETRIEVAL ERROR" : "RSI:" + rsi;
         rsiLabel = new JLabel(labelTitle, JLabel.CENTER);
         rsiLabel.setVerticalTextPosition(JLabel.BOTTOM);
         rsiLabel.setHorizontalTextPosition(JLabel.CENTER);
@@ -105,22 +90,22 @@ public class UIMain implements ActionListener {
         parametersPanel = new JPanel();
         parametersPanel.setPreferredSize(new Dimension(400, 40));
         frame.getContentPane().add(parametersPanel, BorderLayout.SOUTH);
-        loadProductSelector();
-        loadGranularitySelector();
+        productSelector = loadParametersPanelSelector(CBProduct.values(), Config.shared.product);
+        parametersPanel.add(productSelector, BorderLayout.WEST);
+        granularitySelector = loadParametersPanelSelector(CBTimeGranularity.values(), Config.shared.timeGranularity);
+        parametersPanel.add(granularitySelector, BorderLayout.CENTER);
+        barCountSelector = loadParametersPanelSelector(ChartBarCount.values(), Config.shared.chartBarCount);
+        parametersPanel.add(barCountSelector, BorderLayout.EAST);
     }
 
-    private void loadProductSelector() {
-        productSelector = new JComboBox(CBProduct.values());
-        productSelector.setSelectedIndex(0);
-        productSelector.addActionListener(this);
-        parametersPanel.add(productSelector, BorderLayout.CENTER);
-    }
-
-    private void loadGranularitySelector() {
-        granularitySelector = new JComboBox(CBTimeGranularity.values());
-        granularitySelector.setSelectedIndex(3);
-        granularitySelector.addActionListener(this);
-        parametersPanel.add(granularitySelector, BorderLayout.EAST);
+    /*
+    Precondition: selectedVal is in values
+     */
+    private JComboBox loadParametersPanelSelector(Object[] values, Object selectedVal) {
+        JComboBox selector = new JComboBox(values);
+        selector.setSelectedIndex(Arrays.asList(values).indexOf(selectedVal));
+        selector.addActionListener(this);
+        return selector;
     }
 
     private void initiateChart(BarDataSeries barDataSeries) {
@@ -134,39 +119,33 @@ public class UIMain implements ActionListener {
     }
 
     private XYDataset createTrainingChartDataset(BarDataSeries barDataSeries) {
-        try {
-            XYSeries priceSeries = new XYSeries(barDataSeries.product.productName + " Price");
-            XYSeries buySeries = new XYSeries(barDataSeries.product.productName + " Buys");
-            XYSeries sellSeries = new XYSeries(barDataSeries.product.productName + " Sells");
-            ArrayList<BarDataPoint> buyBars = barDataSeries.getDataPointsForBarAction(BarAction.BUY);
-            ArrayList<BarDataPoint> sellBars = barDataSeries.getDataPointsForBarAction(BarAction.SELL);
-            for (int i = 0; i < barDataSeries.getBarCount(); i++) {
-                BarDataPoint barDPI = barDataSeries.getBarDataPoint(i);
-                if (barDPI.bar.isBullish()) {
-                    double lowPrice = barDPI.bar.getLowPrice().doubleValue();
-                    priceSeries.add(i, lowPrice);
-                    if (buyBars.contains(barDPI)) {
-                        buySeries.add(i, lowPrice);
-                    }
-                } else {
-                    double highPrice = barDPI.bar.getHighPrice().doubleValue();
-                    priceSeries.add(i, highPrice);
-                    if (sellBars.contains(barDPI)) {
-                        sellSeries.add(i, highPrice);
-                    }
+        XYSeries priceSeries = new XYSeries(barDataSeries.product.productName + " Price");
+        XYSeries buySeries = new XYSeries(barDataSeries.product.productName + " Buys");
+        XYSeries sellSeries = new XYSeries(barDataSeries.product.productName + " Sells");
+        ArrayList<BarDataPoint> buyBars = barDataSeries.getDataPointsForBarAction(BarAction.BUY);
+        ArrayList<BarDataPoint> sellBars = barDataSeries.getDataPointsForBarAction(BarAction.SELL);
+        for (int i = 0; i < barDataSeries.getBarCount(); i++) {
+            BarDataPoint barDPI = barDataSeries.getBarDataPoint(i);
+            if (barDPI.bar.isBullish()) {
+                double lowPrice = barDPI.bar.getLowPrice().doubleValue();
+                priceSeries.add(i, lowPrice);
+                if (buyBars.contains(barDPI)) {
+                    buySeries.add(i, lowPrice);
+                }
+            } else {
+                double highPrice = barDPI.bar.getHighPrice().doubleValue();
+                priceSeries.add(i, highPrice);
+                if (sellBars.contains(barDPI)) {
+                    sellSeries.add(i, highPrice);
                 }
             }
-
-            XYSeriesCollection dataset = new XYSeriesCollection();
-            dataset.addSeries(priceSeries);
-            dataset.addSeries(buySeries);
-            dataset.addSeries(sellSeries);
-
-            return dataset;
-        } catch (Exception e) {
-            return null;
-            // TODO
         }
+
+        XYSeriesCollection dataset = new XYSeriesCollection();
+        dataset.addSeries(priceSeries);
+        dataset.addSeries(buySeries);
+        dataset.addSeries(sellSeries);
+        return dataset;
     }
 
     private JFreeChart createChart(BarDataSeries barDataSeries, XYDataset dataset) {
@@ -185,8 +164,9 @@ public class UIMain implements ActionListener {
         NumberAxis priceRange = (NumberAxis) plot.getRangeAxis();
         double low = barDataSeries.getBarDataPointWithLowestLow().bar.getLowPrice().doubleValue();
         double high = barDataSeries.getBarDataPointWithHighestHigh().bar.getHighPrice().doubleValue();
-        double rangeLow = low + (10 - low % 10);
-        double rangeHigh = high + (10 - high % 10);
+        double volatility = (high - low) / low;
+        double rangeLow = low - (low * volatility / 10); //TODO: find better solution to maximize use of screen real estate
+        double rangeHigh = high + (high * volatility / 10);
         priceRange.setRange(rangeLow, rangeHigh);
         priceRange.setTickUnit(new NumberTickUnit((rangeHigh - rangeLow) / 5));
         XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
@@ -209,29 +189,32 @@ public class UIMain implements ActionListener {
         return chart;
     }
 
+    private void refreshUIDynamicElements() {
+        Double tickerPrice = CBPublicData.getTickerPrice(Config.shared.product);
+        String newLabelTitle = (tickerPrice == null) ? "PRICE RETRIEVAL ERROR" : "$" + tickerPrice;
+        priceLabel.setText(newLabelTitle);
+
+        BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, Config.shared.chartBarCount.value, Config.shared.timeGranularity);
+        ClosePriceIndicator closePrice = new ClosePriceIndicator(recentBarSeries);
+        RSIIndicator rsiIndicator = new RSIIndicator(closePrice, Config.shared.rsiCalculationTickCount);
+        double rsi = rsiIndicator.getValue(Config.shared.chartBarCount.value - 1).doubleValue();
+        String rsiLabelTitle = (recentBarSeries.isEmpty()) ? "RSI RETRIEVAL ERROR" : "RSI:" + rsi;
+        rsiLabel.setText(rsiLabelTitle);
+
+        if (chartPanel != null) {
+            frame.remove(chartPanel);
+        }
+        BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries);
+        initiateChart(recentBarDataSeries);
+    }
+
     private void beginRefreshCycle() {
         new Thread(() -> {
             while (true) {
                 try {
                     Thread.sleep(2000 ); /* TODO: find suitable time; must be > 1000ms if retrieving bar series
                     due to API restrictions, but would want to change so that bar series isn't retrieved every time ticker is */
-                    String newLabelTitle = "$" + CBPublicData.getTickerPrice(Config.shared.product);
-                    priceLabel.setText(newLabelTitle);
-
-                    BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, 300, Config.shared.timeGranularity);
-                    ClosePriceIndicator closePrice = new ClosePriceIndicator(recentBarSeries);
-                    RSIIndicator rsiIndicator = new RSIIndicator(closePrice, Config.shared.rsiCalculationTickCount);
-                    double rsi = rsiIndicator.getValue(299).doubleValue();
-                    String rsiLabelTitle = "RSI:" + rsi;
-                    rsiLabel.setText(rsiLabelTitle);
-
-                    BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries);
-                    recentBarDataSeries.labelBarActions(0.75, 0.75);
-
-                    if (chartPanel != null) {
-                        frame.remove(chartPanel);
-                    }
-                    initiateChart(recentBarDataSeries); // TODO: update chart if parameters haven't changed rather than regenerating
+                    refreshUIDynamicElements();
                 } catch (Exception e) {
                     priceLabel.setText("PRICE RETRIEVAL ERROR");
                     rsiLabel.setText("RSI RETRIEVAL ERROR");
@@ -248,6 +231,12 @@ public class UIMain implements ActionListener {
         } else if (e.getSource() == granularitySelector) {
             CBTimeGranularity newGranularity = (CBTimeGranularity) granularitySelector.getSelectedItem();
             Config.shared.timeGranularity = newGranularity;
+        } else if (e.getSource() == barCountSelector) {
+            ChartBarCount newBarCount = (ChartBarCount) barCountSelector.getSelectedItem();
+            Config.shared.chartBarCount = newBarCount;
         }
+
+        refreshUIDynamicElements();
     }
+
 }

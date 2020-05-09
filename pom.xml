@@ -47,6 +47,12 @@
             <artifactId>jfreechart</artifactId>
             <version>1.5.0</version>
         </dependency>
+        <!-- https://github.com/riversun/java-promise -->
+        <dependency>
+            <groupId>org.riversun</groupId>
+            <artifactId>java-promise</artifactId>
+            <version>1.1.0</version>
+        </dependency>
     </dependencies>
 
 

@@ -1,5 +1,7 @@
 package io.ethanfine.neuratrade.coinbase;
 
+import io.ethanfine.neuratrade.Config;
+
 public enum CBTimeGranularity {
 
     MINUTE(60),
@@ -11,8 +13,27 @@ public enum CBTimeGranularity {
 
     public final int seconds;
 
-    private CBTimeGranularity(int seconds) {
+    CBTimeGranularity(int seconds) {
         this.seconds = seconds;
+    }
+
+    public double buySellMinVolatility() {
+        switch (this) {
+            case MINUTE:
+                return Config.shared.minsTimeGranularityBuySellMinVolatility;
+            case MINUTE_FIVE:
+                return Config.shared.minsFiveTimeGranularityBuySellMinVolatility;
+            case MINUTE_FIFTEEN:
+                return Config.shared.minsFifteenTimeGranularityBuySellMinVolatility;
+            case HOUR:
+                return Config.shared.hourTimeGranularityBuySellMinVolatility;
+            case HOUR_SIX:
+                return Config.shared.hourSixTimeGranularityBuySellMinVolatility;
+            case DAY:
+                return Config.shared.dayTimeGranularityBuySellMinVolatility;
+            default:
+                return Config.shared.minsTimeGranularityBuySellMinVolatility;
+        }
     }
 
 }

@@ -17,4 +17,8 @@ public class BarDataPoint {
         this.barDataSeries = barDataSeries;
     }
 
+    public double volatility() {
+        return ((bar.getHighPrice().doubleValue() - bar.getLowPrice().doubleValue()) / bar.getLowPrice().doubleValue()) * 100;
+    }
+
 }

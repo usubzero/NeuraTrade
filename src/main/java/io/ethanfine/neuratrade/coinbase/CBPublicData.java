@@ -7,10 +7,13 @@ import io.ethanfine.neuratrade.util.Constants;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import io.ethanfine.neuratrade.util.Util;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
+import org.riversun.promise.SyncPromise;
 import org.ta4j.core.*;
 
 public class CBPublicData {
@@ -18,31 +21,57 @@ public class CBPublicData {
     /*
     Get the epoch time (in seconds) from Coinbase Pro
      */
-    public static long getCBTime() throws NetworkRequestException {
+    public static Long getCBTime() {
         String cbAPIEndPtUrlString = Constants.CB_API_URL + Constants.CB_API_ENDPOINT_TIME;
-        String get_response = NetworkingManager.performGetRequest(cbAPIEndPtUrlString);
-        try {
-            JSONParser parser = new JSONParser();
-            JSONObject jObj = (JSONObject) parser.parse(get_response);
-            return (long) ((double) jObj.get("epoch"));
-        } catch (Exception e) {
-            throw new NetworkRequestException("Failed to parse response from request with URL " + cbAPIEndPtUrlString);
-        }
+        AtomicLong epochTime = new AtomicLong(-1);
+        SyncPromise.resolve()
+                .then(NetworkingManager.performGetRequest(cbAPIEndPtUrlString))
+                .always((action, data) -> {
+                    if (data instanceof String) {
+                        String get_response = (String) data;
+                        try {
+                            JSONParser parser = new JSONParser();
+                            JSONObject jObj = (JSONObject) parser.parse(get_response);
+                            epochTime.set((long) ((double) jObj.get("epoch")));
+                            action.resolve();
+                        } catch (Exception e) {
+                            action.reject();
+                            throw new NetworkRequestException("Failed to parse response from request with URL " + cbAPIEndPtUrlString);
+                        }
+                    } else {
+                        action.reject();
+                    }
+                })
+                .start();
+        return (epochTime.get() == -1) ? null : epochTime.get();
     }
 
-    public static double getTickerPrice(CBProduct product) throws Exception {
+    public static Double getTickerPrice(CBProduct product) {
         String cbAPIEndPtUrlString = Constants.CB_API_URL + Constants.CB_API_ENDPOINT_TICKER(product);
-        String get_response = NetworkingManager.performGetRequest(cbAPIEndPtUrlString);
-        try {
-            JSONParser parser = new JSONParser();
-            JSONObject jObj = (JSONObject) parser.parse(get_response);
-            return Double.parseDouble((String) jObj.get("price"));
-        } catch (Exception e) {
-            throw new NetworkRequestException("Failed to parse response from request with URL " + cbAPIEndPtUrlString);
-        }
+        AtomicLong price = new AtomicLong(-1);
+        SyncPromise.resolve()
+                .then(NetworkingManager.performGetRequest(cbAPIEndPtUrlString))
+                .always((action, data) -> {
+                    if (data instanceof String) {
+                        String get_response = (String) data;
+                        try {
+                            JSONParser parser = new JSONParser();
+                            JSONObject jObj = (JSONObject) parser.parse(get_response);
+                            price.set((long) Double.parseDouble((String) jObj.get("price")));
+                            action.resolve();
+                        } catch (Exception e) {
+                            action.reject();
+                            throw new NetworkRequestException("Failed to parse response from request with URL " + cbAPIEndPtUrlString);
+                        }
+                    } else {
+                        action.reject();
+                    }
+                })
+                .start();
+        return (price.get() == -1) ? null : (double) price.get();
     }
 
-    public static BarSeries getBarSeries(CBProduct product, long startTime, long endTime, CBTimeGranularity timeGranularity) throws NetworkRequestException {
+    public static BarSeries getBarSeries(CBProduct product, long startTime, long endTime, CBTimeGranularity timeGranularity) {
         // Cap the number of bars to 300 due to API restrictions
         if (((endTime - startTime) / timeGranularity.seconds) > 300) {
             endTime = startTime + timeGranularity.seconds * 300;
@@ -50,8 +79,23 @@ public class CBPublicData {
 
         BarSeries barSeries = new BaseBarSeriesBuilder().withName(product.productName).build();
         String cbAPIEndPtUrlString = Constants.CB_API_URL + Constants.CB_API_ENDPOINT_HISTORIC_RATES(product, startTime, endTime, timeGranularity);
-        String get_response = NetworkingManager.performGetRequest(cbAPIEndPtUrlString);
-        double[][] bars = Util.stringToDeep(get_response);
+        AtomicReference<String> get_response = new AtomicReference<>(null);
+        SyncPromise.resolve()
+                .then(NetworkingManager.performGetRequest(cbAPIEndPtUrlString))
+                .always((action, data) -> {
+                    if (data instanceof String) {
+                        get_response.set((String) data);
+                        action.resolve();
+                    } else {
+                        action.reject();
+                    }
+                })
+                .start();
+        if (get_response.get() == null) {
+            return barSeries;
+        }
+
+        double[][] bars = Util.stringToDeep(get_response.get());
         for (double[] bar : bars) {
             ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond((long) bar[0]), ZoneId.systemDefault());
             switch (timeGranularity) {
@@ -80,17 +124,17 @@ public class CBPublicData {
         return barSeries;
     }
 
-    public static BarSeries getBarSeries(CBProduct product, long startTime, int barCount, CBTimeGranularity timeGranularity) throws Exception {
+    public static BarSeries getBarSeries(CBProduct product, long startTime, int barCount, CBTimeGranularity timeGranularity) {
         long endTime = startTime + barCount * timeGranularity.seconds;
         return getBarSeries(product, startTime, endTime, timeGranularity);
     }
 
-    public static BarSeries getBarSeries(CBProduct product, int barCount, long endTime, CBTimeGranularity timeGranularity) throws Exception {
+    public static BarSeries getBarSeries(CBProduct product, int barCount, long endTime, CBTimeGranularity timeGranularity) {
         long startTime = endTime - barCount * timeGranularity.seconds;
         return getBarSeries(product, startTime, endTime, timeGranularity);
     }
 
-    public static BarSeries getRecentBarSeries(CBProduct product, int barCount, CBTimeGranularity timeGranularity) throws Exception {
+    public static BarSeries getRecentBarSeries(CBProduct product, int barCount, CBTimeGranularity timeGranularity) {
         long endTime = getCBTime();
         return getBarSeries(product, barCount, endTime, timeGranularity);
     }

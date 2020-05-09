@@ -46,6 +46,8 @@ public class BarDataSeries {
             bdp.macd = macdIndicator.getValue(i).doubleValue(); // TODO: MACD isn't giving the macd values we want
             barDataArray.add(bdp);
         }
+
+        labelBarActions();
     }
 
     public int getBarCount() {
@@ -86,73 +88,75 @@ public class BarDataSeries {
         return highestHigh;
     }
 
-    public void labelBarActions(double percentGainThreshold, double percentLossThreshold) { // TODO: base thresholds on granularity and volatility
+    private void labelBarActions() {
+        double volatilityThreshold = Config.shared.timeGranularity.buySellMinVolatility();
+        ArrayList<BarDataPoint> bdpsInLocalPeriod = new ArrayList<>();
+        int nextPeriodI = -1;
         for (int i = 0; i < getBarCount(); i++) {
-            BarDataPoint bdpI = getBarDataPoint(i);
-            for (int y = 10; y > 0; y--) {
-                if (i + y >= getBarCount()) {
-                    continue;
+            if (i < nextPeriodI) {
+                continue;
+            }
+            for (int y = i; y < getBarCount(); y++) {
+                BarDataPoint bdpY = getBarDataPoint(y);
+                bdpsInLocalPeriod.add(bdpY);
+
+                BarDataPoint localPeriodHighBDP = null;
+                BarDataPoint localPeriodLowBDP = null;
+                for (BarDataPoint localPeriodBDP : bdpsInLocalPeriod) {
+                    if (localPeriodHighBDP == null || localPeriodBDP.bar.getHighPrice().doubleValue() > localPeriodHighBDP.bar.getHighPrice().doubleValue()) {
+                        localPeriodHighBDP = localPeriodBDP;
+                    }
+                    if (localPeriodLowBDP == null || localPeriodBDP.bar.getLowPrice().doubleValue() < localPeriodLowBDP.bar.getLowPrice().doubleValue()) {
+                        localPeriodLowBDP = localPeriodBDP;
+                    }
                 }
-                Bar barY = barSeries.getBar(i + y);
-                if (barY.getHighPrice().doubleValue() > bdpI.bar.getLowPrice().doubleValue()) { // Bullish
-                    double potentialGain = ((barY.getHighPrice().doubleValue() - bdpI.bar.getLowPrice().doubleValue()) / bdpI.bar.getLowPrice().doubleValue()) * 100;
-                    if (potentialGain >= percentGainThreshold) {
-                        bdpI.barAction = BarAction.BUY;
-                    }
-                } else { // Bearish
-                    double potentialLoss = Math.abs(((barY.getLowPrice().doubleValue() - bdpI.bar.getHighPrice().doubleValue())) / bdpI.bar.getHighPrice().doubleValue()) * 100;
-                    if (potentialLoss >= percentLossThreshold) {
-                        bdpI.barAction = BarAction.SELL;
-                    }
+
+                double localPeriodVolatility = ((localPeriodHighBDP.bar.getHighPrice().doubleValue() - localPeriodLowBDP.bar.getLowPrice().doubleValue()) / localPeriodLowBDP.bar.getLowPrice().doubleValue()) * 100;
+
+                if (y + 1 < getBarCount() &&
+                        (bdpY.bar.isBullish() && getBarDataPoint(y + 1).bar.isBullish() ||
+                                bdpY.bar.isBearish() && getBarDataPoint(y + 1).bar.isBearish())) continue; // if continuing trend short term, expand local period
+
+                if (localPeriodVolatility >= volatilityThreshold) {
+                    localPeriodHighBDP.barAction = BarAction.SELL;
+                    localPeriodLowBDP.barAction = BarAction.BUY;
+                    bdpsInLocalPeriod.clear();
+                    nextPeriodI = y + 1;
                 }
             }
         }
 
-        // Below is less greedy than new implementation beneath
-        for (int i = 1; i < getBarCount(); i++) {
-            BarDataPoint bdpBefore = getBarDataPoint(i - 1);
-            BarDataPoint bdp = getBarDataPoint(i);
-            if (bdpBefore.barAction == bdp.barAction) {
-                if (bdp.barAction == BarAction.BUY) {
-                    bdp.barAction = BarAction.HOLD;
-                } else if (bdp.barAction == BarAction.SELL) {
-                    bdp.barAction = BarAction.HOLD;
+        BarAction lastRepeated = null;
+        boolean repeating = false;
+        if (Config.shared.filterRepetitiveSignals) {
+            for (int i = 1; i < getBarCount(); i++) {
+                BarDataPoint bdpBefore = getBarDataPoint(i - 1);
+                BarDataPoint bdp = getBarDataPoint(i);
+                if (bdp.barAction == BarAction.HOLD) continue;
+                if (bdpBefore.barAction == bdp.barAction || (lastRepeated != null && repeating && lastRepeated == bdp.barAction)) {
+                    repeating = true;
+                    lastRepeated = bdp.barAction;
+                    if (bdp.barAction == BarAction.BUY) {
+                        bdp.barAction = BarAction.HOLD;
+                    } else if (bdp.barAction == BarAction.SELL) {
+                        bdp.barAction = BarAction.HOLD;
+                    }
+                }
+                if (bdpBefore.barAction != bdp.barAction && (lastRepeated != null && repeating && lastRepeated != bdp.barAction)) {
+                    repeating = false;
                 }
             }
         }
-
-//        int nextActionI = -1;
-//        for (int i = 0; i < getBarCount(); i++) {
-//            BarDataPoint bdpI = getBarDataPoint(i);
-//            if (bdpI.barAction == BarAction.HOLD || i < nextActionI) continue;
-//
-//            BarAction iAction = bdpI.barAction;
-//            BarAction nextAction = (iAction == BarAction.BUY) ? BarAction.SELL : BarAction.BUY;
-////            int nextActionI = -1;
-//            BarDataPoint greatestProfitPoint = bdpI;
-//            for (int y = i + 1; y < getBarCount(); y++) {
-//                BarDataPoint bdpY = getBarDataPoint(y);
-//                if (bdpY.barAction == BarAction.HOLD) continue;
-//                if (bdpY.barAction == nextAction) {
-//                    nextActionI = y;
-//                    break;
-//                }
-//
-//                double greatestProfitPointHigh = greatestProfitPoint.bar.getHighPrice().doubleValue();
-//                double greatestProfitPointLow = greatestProfitPoint.bar.getLowPrice().doubleValue();
-//                if (iAction == BarAction.BUY && bdpY.bar.getLowPrice().doubleValue() < greatestProfitPointLow) {
-//                    greatestProfitPoint = bdpY;
-//                } else if (nextAction == BarAction.SELL && bdpY.bar.getHighPrice().doubleValue() > greatestProfitPointHigh) {
-//                    greatestProfitPoint = bdpY;
-//                }
-//            }
-//
-//            if (nextActionI == -1) continue;
-//
-//            for (int y = i; y < nextActionI; y++) {
-//                BarDataPoint bdpY = getBarDataPoint(y);
-//                if (bdpY.barAction == iAction && bdpY != greatestProfitPoint) {
-//                    bdpY.barAction = BarAction.HOLD;
+//        if (Config.shared.filterRepetitiveSignals) {
+//            for (int i = 1; i < getBarCount(); i++) {
+//                BarDataPoint bdpBefore = getBarDataPoint(i - 1);
+//                BarDataPoint bdp = getBarDataPoint(i);
+//                if (bdpBefore.barAction == bdp.barAction) {
+//                    if (bdp.barAction == BarAction.BUY) {
+//                        bdp.barAction = BarAction.HOLD;
+//                    } else if (bdp.barAction == BarAction.SELL) {
+//                        bdp.barAction = BarAction.HOLD;
+//                    }
 //                }
 //            }
 //        }
