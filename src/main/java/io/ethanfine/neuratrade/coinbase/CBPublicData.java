@@ -1,5 +1,7 @@
 package io.ethanfine.neuratrade.coinbase;
 
+import io.ethanfine.neuratrade.coinbase.models.CBProduct;
+import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.networking.NetworkingManager;
 import io.ethanfine.neuratrade.networking.exceptions.NetworkRequestException;
 import io.ethanfine.neuratrade.util.Constants;
@@ -48,7 +50,7 @@ public class CBPublicData {
 
     public static Double getTickerPrice(CBProduct product) {
         String cbAPIEndPtUrlString = Constants.CB_API_URL + Constants.CB_API_ENDPOINT_TICKER(product);
-        AtomicLong price = new AtomicLong(-1);
+        AtomicReference<Double> price = new AtomicReference<>(-1.0);
         SyncPromise.resolve()
                 .then(NetworkingManager.performGetRequest(cbAPIEndPtUrlString))
                 .always((action, data) -> {
@@ -57,7 +59,7 @@ public class CBPublicData {
                         try {
                             JSONParser parser = new JSONParser();
                             JSONObject jObj = (JSONObject) parser.parse(get_response);
-                            price.set((long) Double.parseDouble((String) jObj.get("price")));
+                            price.set(Double.parseDouble((String) jObj.get("price")));
                             action.resolve();
                         } catch (Exception e) {
                             action.reject();
@@ -68,7 +70,7 @@ public class CBPublicData {
                     }
                 })
                 .start();
-        return (price.get() == -1) ? null : (double) price.get();
+        return (price.get() == -1) ? null : price.get();
     }
 
     public static BarSeries getBarSeries(CBProduct product, long startTime, long endTime, CBTimeGranularity timeGranularity) {

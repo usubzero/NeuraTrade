@@ -1,7 +1,7 @@
 package io.ethanfine.neuratrade.util;
 
-import io.ethanfine.neuratrade.coinbase.CBProduct;
-import io.ethanfine.neuratrade.coinbase.CBTimeGranularity;
+import io.ethanfine.neuratrade.coinbase.models.CBProduct;
+import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 
 public class Constants {
 

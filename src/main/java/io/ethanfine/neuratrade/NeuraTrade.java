@@ -1,7 +1,7 @@
 package io.ethanfine.neuratrade;
 
 import io.ethanfine.neuratrade.coinbase.CBPublicData;
-import io.ethanfine.neuratrade.coinbase.CBTimeGranularity;
+import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.data.models.BarDataPoint;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
 import io.ethanfine.neuratrade.ui.UIMain;

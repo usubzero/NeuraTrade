@@ -1,4 +1,4 @@
-package io.ethanfine.neuratrade.coinbase;
+package io.ethanfine.neuratrade.coinbase.models;
 
 import java.util.HashMap;
 

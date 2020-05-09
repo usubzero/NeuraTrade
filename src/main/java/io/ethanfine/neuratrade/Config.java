@@ -1,7 +1,7 @@
 package io.ethanfine.neuratrade;
 
-import io.ethanfine.neuratrade.coinbase.CBProduct;
-import io.ethanfine.neuratrade.coinbase.CBTimeGranularity;
+import io.ethanfine.neuratrade.coinbase.models.CBProduct;
+import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.ui.models.ChartBarCount;
 
 public class Config {
@@ -11,8 +11,9 @@ public class Config {
     /*
     Trade parameters
      */
-    public CBProduct product;
-    public CBTimeGranularity timeGranularity;
+    public CBProduct product = CBProduct.BTCUSD;
+    public CBTimeGranularity timeGranularity = CBTimeGranularity.HOUR;
+    public ChartBarCount chartBarCount = ChartBarCount.HUNDRED_TWO;
     public int rsiCalculationTickCount = 14;
 
     /*
@@ -28,21 +29,13 @@ public class Config {
     // Whether or not to remove repetitive buy or sell signals
     public boolean filterRepetitiveSignals = false;
 
-    // Number of bars in chart
-    public ChartBarCount chartBarCount = ChartBarCount.HUNDRED_TWO;
-
     /*
     API parameters
      */
-    public int tickerUpdatesPerSecond = 5;
+//    public int tickerUpdatesPerSecond = 5;
 
     static {
         shared = new Config();
-    }
-
-    private Config() {
-        product = CBProduct.BTCUSD;
-        timeGranularity = CBTimeGranularity.HOUR;
     }
 
 }

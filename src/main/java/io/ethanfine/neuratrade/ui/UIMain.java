@@ -1,13 +1,14 @@
 package io.ethanfine.neuratrade.ui;
 
 import io.ethanfine.neuratrade.Config;
-import io.ethanfine.neuratrade.coinbase.CBProduct;
+import io.ethanfine.neuratrade.coinbase.models.CBProduct;
 import io.ethanfine.neuratrade.coinbase.CBPublicData;
-import io.ethanfine.neuratrade.coinbase.CBTimeGranularity;
+import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.data.models.BarAction;
 import io.ethanfine.neuratrade.data.models.BarDataPoint;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
 import io.ethanfine.neuratrade.ui.models.ChartBarCount;
+import io.ethanfine.neuratrade.util.Util;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -67,7 +68,7 @@ public class UIMain implements ActionListener {
 
     private void loadTickerPriceLabel() {
         Double tickerPrice = CBPublicData.getTickerPrice(Config.shared.product);
-        String labelTitle = tickerPrice == null ? "PRICE RETRIEVAL ERROR" : "$" + tickerPrice;
+        String labelTitle = tickerPrice == null ? "PRICE RETRIEVAL ERROR" : "$" + Util.formatDouble(tickerPrice, 2);
         priceLabel = new JLabel(labelTitle, JLabel.CENTER);
         priceLabel.setVerticalTextPosition(JLabel.BOTTOM);
         priceLabel.setHorizontalTextPosition(JLabel.CENTER);
@@ -79,7 +80,7 @@ public class UIMain implements ActionListener {
         ClosePriceIndicator closePrice = new ClosePriceIndicator(recentBarSeries);
         RSIIndicator rsiIndicator = new RSIIndicator(closePrice, Config.shared.rsiCalculationTickCount);
         double rsi = rsiIndicator.getValue(Config.shared.chartBarCount.value - 1).doubleValue();
-        String labelTitle = recentBarSeries.isEmpty() ? "RSI RETRIEVAL ERROR" : "RSI:" + rsi;
+        String labelTitle = recentBarSeries.isEmpty() ? "RSI RETRIEVAL ERROR" : "RSI:" + Util.formatDouble(rsi, 2);
         rsiLabel = new JLabel(labelTitle, JLabel.CENTER);
         rsiLabel.setVerticalTextPosition(JLabel.BOTTOM);
         rsiLabel.setHorizontalTextPosition(JLabel.CENTER);
@@ -191,14 +192,14 @@ public class UIMain implements ActionListener {
 
     private void refreshUIDynamicElements() {
         Double tickerPrice = CBPublicData.getTickerPrice(Config.shared.product);
-        String newLabelTitle = (tickerPrice == null) ? "PRICE RETRIEVAL ERROR" : "$" + tickerPrice;
+        String newLabelTitle = (tickerPrice == null) ? "PRICE RETRIEVAL ERROR" : "$" + Util.formatDouble(tickerPrice, 2);
         priceLabel.setText(newLabelTitle);
 
         BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, Config.shared.chartBarCount.value, Config.shared.timeGranularity);
         ClosePriceIndicator closePrice = new ClosePriceIndicator(recentBarSeries);
         RSIIndicator rsiIndicator = new RSIIndicator(closePrice, Config.shared.rsiCalculationTickCount);
-        double rsi = rsiIndicator.getValue(Config.shared.chartBarCount.value - 1).doubleValue();
-        String rsiLabelTitle = (recentBarSeries.isEmpty()) ? "RSI RETRIEVAL ERROR" : "RSI:" + rsi;
+        double rsi = (recentBarSeries.isEmpty()) ? 0 : rsiIndicator.getValue(Config.shared.chartBarCount.value - 1).doubleValue();
+        String rsiLabelTitle = (recentBarSeries.isEmpty()) ? "RSI RETRIEVAL ERROR" : "RSI:" + Util.formatDouble(rsi, 2);
         rsiLabel.setText(rsiLabelTitle);
 
         if (chartPanel != null) {

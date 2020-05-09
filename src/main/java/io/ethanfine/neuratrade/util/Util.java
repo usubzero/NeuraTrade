@@ -1,6 +1,8 @@
 package io.ethanfine.neuratrade.util;
 
+import java.math.RoundingMode;
 import java.text.DateFormat;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,6 +13,13 @@ public class Util {
     public static String convertToIsoFromEpoch(long epochSeconds) {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmXXX");
         return df.format(new Date(epochSeconds * 1000));
+    }
+
+    public static String formatDouble(double d, int decimalPlaceCount) {
+        String decimalPlaces = new String(new char[decimalPlaceCount]).replace("\0", "#");
+        DecimalFormat df = new DecimalFormat("#." + decimalPlaces);
+        df.setRoundingMode(RoundingMode.CEILING);
+        return df.format(d);
     }
 
     public static double[][] stringToDeep(String str) {

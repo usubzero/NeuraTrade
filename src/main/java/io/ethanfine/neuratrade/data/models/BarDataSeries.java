@@ -1,8 +1,7 @@
 package io.ethanfine.neuratrade.data.models;
 
 import io.ethanfine.neuratrade.Config;
-import io.ethanfine.neuratrade.coinbase.CBProduct;
-import org.ta4j.core.Bar;
+import io.ethanfine.neuratrade.coinbase.models.CBProduct;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.indicators.MACDIndicator;
 import org.ta4j.core.indicators.RSIIndicator;
@@ -10,17 +9,13 @@ import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 import org.ta4j.core.indicators.helpers.HighPriceIndicator;
 import org.ta4j.core.indicators.helpers.LowPriceIndicator;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 
 public class BarDataSeries {
 
     public CBProduct product;
 
     private ArrayList<BarDataPoint> barDataArray;
-    private BarSeries barSeries;
 
     // Indicators for series
     public RSIIndicator rsiIndicator;
@@ -31,7 +26,6 @@ public class BarDataSeries {
 
     public BarDataSeries(CBProduct product, BarSeries barSeries) {
         this.product = product;
-        this.barSeries = barSeries;
         this.barDataArray = new ArrayList<>();
 
         closePriceIndicator = new ClosePriceIndicator(barSeries);
