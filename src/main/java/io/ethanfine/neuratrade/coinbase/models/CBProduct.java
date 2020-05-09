@@ -7,7 +7,10 @@ public enum CBProduct {
     BTCUSD("BTC-USD"),
     ETHUSD("ETH-USD"),
     BCHUSD("BCH-USD"),
-    LTCUSD("LTC-USD");
+    LTCUSD("LTC-USD"),
+    LINKUSD("LINK-USD"),
+    XLMUSD("XLM-USD"),
+    ETCUSD("ETC-USD");
 
     public final String productName;
 

@@ -9,18 +9,14 @@ import io.ethanfine.neuratrade.data.models.BarDataPoint;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
 import io.ethanfine.neuratrade.ui.models.ChartBarCount;
 import io.ethanfine.neuratrade.util.Util;
-import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.NumberTickUnit;
-import org.jfree.chart.block.BlockBorder;
-import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.xy.CandlestickRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
-import org.jfree.data.xy.XYDataset;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
+import org.jfree.data.xy.*;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.indicators.RSIIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
@@ -30,8 +26,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.geom.Ellipse2D;
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 
 public class UIMain implements ActionListener {
 
@@ -41,8 +40,8 @@ public class UIMain implements ActionListener {
     JLabel rsiLabel;
     JPanel parametersPanel;
     JComboBox productSelector;
-    JComboBox granularitySelector;
     JComboBox barCountSelector;
+    JComboBox granularitySelector;
 
     public UIMain() {
         frame = new JFrame("NeuraTrade");
@@ -93,10 +92,10 @@ public class UIMain implements ActionListener {
         frame.getContentPane().add(parametersPanel, BorderLayout.SOUTH);
         productSelector = loadParametersPanelSelector(CBProduct.values(), Config.shared.product);
         parametersPanel.add(productSelector, BorderLayout.WEST);
-        granularitySelector = loadParametersPanelSelector(CBTimeGranularity.values(), Config.shared.timeGranularity);
-        parametersPanel.add(granularitySelector, BorderLayout.CENTER);
         barCountSelector = loadParametersPanelSelector(ChartBarCount.values(), Config.shared.chartBarCount);
-        parametersPanel.add(barCountSelector, BorderLayout.EAST);
+        parametersPanel.add(barCountSelector, BorderLayout.CENTER);
+        granularitySelector = loadParametersPanelSelector(CBTimeGranularity.values(), Config.shared.timeGranularity);
+        parametersPanel.add(granularitySelector, BorderLayout.EAST);
     }
 
     /*
@@ -110,8 +109,10 @@ public class UIMain implements ActionListener {
     }
 
     private void initiateChart(BarDataSeries barDataSeries) {
-        XYDataset dataset = createTrainingChartDataset(barDataSeries);
-        JFreeChart chart = createChart(barDataSeries, dataset);
+
+        AbstractXYDataset priceDataset = createPriceDataSet(barDataSeries);
+        XYDataset labelsDataset = createTrainingChartDataset(barDataSeries);
+        JFreeChart chart = createChart(barDataSeries, priceDataset, labelsDataset);
 
         chartPanel = new ChartPanel(chart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -119,72 +120,71 @@ public class UIMain implements ActionListener {
         frame.getContentPane().add(chartPanel, BorderLayout.CENTER);
     }
 
+    private AbstractXYDataset createPriceDataSet(BarDataSeries barDataSeries) {
+        OHLCDataItem[] data  = new OHLCDataItem[barDataSeries.getBarCount()];
+
+        for (int i = 0; i < barDataSeries.getBarCount(); i++) {
+            BarDataPoint bdpI = barDataSeries.getBarDataPoint(i);
+            data[i] = new OHLCDataItem(Date.from(bdpI.bar.getBeginTime().toInstant()),
+                    bdpI.bar.getOpenPrice().doubleValue(),
+                    bdpI.bar.getHighPrice().doubleValue(),
+                    bdpI.bar.getLowPrice().doubleValue(),
+                    bdpI.bar.getClosePrice().doubleValue(),
+                    bdpI.bar.getVolume().doubleValue()
+            );
+        }
+
+        return new DefaultOHLCDataset(Config.shared.product + " Prices", data);
+    }
+
     private XYDataset createTrainingChartDataset(BarDataSeries barDataSeries) {
-        XYSeries priceSeries = new XYSeries(barDataSeries.product.productName + " Price");
         XYSeries buySeries = new XYSeries(barDataSeries.product.productName + " Buys");
         XYSeries sellSeries = new XYSeries(barDataSeries.product.productName + " Sells");
         ArrayList<BarDataPoint> buyBars = barDataSeries.getDataPointsForBarAction(BarAction.BUY);
         ArrayList<BarDataPoint> sellBars = barDataSeries.getDataPointsForBarAction(BarAction.SELL);
         for (int i = 0; i < barDataSeries.getBarCount(); i++) {
-            BarDataPoint barDPI = barDataSeries.getBarDataPoint(i);
-            if (barDPI.bar.isBullish()) {
-                double lowPrice = barDPI.bar.getLowPrice().doubleValue();
-                priceSeries.add(i, lowPrice);
-                if (buyBars.contains(barDPI)) {
-                    buySeries.add(i, lowPrice);
-                }
-            } else {
-                double highPrice = barDPI.bar.getHighPrice().doubleValue();
-                priceSeries.add(i, highPrice);
-                if (sellBars.contains(barDPI)) {
-                    sellSeries.add(i, highPrice);
-                }
+            BarDataPoint bdpI = barDataSeries.getBarDataPoint(i);
+            if (buyBars.contains(bdpI)) {
+                buySeries.add(bdpI.bar.getBeginTime().toEpochSecond() * 1000, bdpI.bar.getLowPrice().doubleValue());
+            }
+            if (sellBars.contains(bdpI)) {
+                sellSeries.add(bdpI.bar.getBeginTime().toEpochSecond() * 1000, bdpI.bar.getHighPrice().doubleValue());
             }
         }
 
         XYSeriesCollection dataset = new XYSeriesCollection();
-        dataset.addSeries(priceSeries);
         dataset.addSeries(buySeries);
         dataset.addSeries(sellSeries);
         return dataset;
     }
 
-    private JFreeChart createChart(BarDataSeries barDataSeries, XYDataset dataset) {
-        JFreeChart chart = ChartFactory.createXYLineChart(
-                barDataSeries.product.productName + " Training Data",
-                "Date",
-                "Price",
-                dataset,
-                PlotOrientation.VERTICAL,
-                true,
-                true,
-                false
-        );
+    private JFreeChart createChart(BarDataSeries barDataSeries, AbstractXYDataset priceDataset, XYDataset labelsDataset) {
+        DateAxis domainAxis = new DateAxis("Date");
+        NumberAxis  rangeAxis = new NumberAxis("Price");
+        CandlestickRenderer renderer = new CandlestickRenderer();
 
-        XYPlot plot = chart.getXYPlot();
-        NumberAxis priceRange = (NumberAxis) plot.getRangeAxis();
-        double low = barDataSeries.getBarDataPointWithLowestLow().bar.getLowPrice().doubleValue();
-        double high = barDataSeries.getBarDataPointWithHighestHigh().bar.getHighPrice().doubleValue();
-        double volatility = (high - low) / low;
-        double rangeLow = low - (low * volatility / 10); //TODO: find better solution to maximize use of screen real estate
-        double rangeHigh = high + (high * volatility / 10);
-        priceRange.setRange(rangeLow, rangeHigh);
-        priceRange.setTickUnit(new NumberTickUnit((rangeHigh - rangeLow) / 5));
-        XYLineAndShapeRenderer renderer = new XYLineAndShapeRenderer();
-        renderer.setSeriesPaint(0, Color.BLUE);
-        renderer.setSeriesStroke(0, new BasicStroke(1.0f));
-        renderer.setSeriesPaint(1, Color.GREEN);
-        renderer.setSeriesLinesVisible(1, false);
-        renderer.setSeriesPaint(2, Color.RED);
-        renderer.setSeriesLinesVisible(2, false);
-        renderer.setSeriesShape(0, new Rectangle(2, 2));
-        Rectangle buySellShape = new Rectangle(4, 4);
-        renderer.setSeriesShape(1, buySellShape);
-        renderer.setSeriesShape(2, buySellShape);
-        plot.setRenderer(renderer);
-        plot.setBackgroundPaint(Color.WHITE);
+        XYPlot mainPlot = new XYPlot(priceDataset, domainAxis, rangeAxis, renderer);
 
-        chart.getLegend().setFrame(BlockBorder.NONE);
+        mainPlot.setDataset(1, labelsDataset);
+        XYLineAndShapeRenderer labelsRenderer = new XYLineAndShapeRenderer(false, true);
+        labelsRenderer.setSeriesPaint(0, Color.BLUE);
+        labelsRenderer.setSeriesPaint(1, Color.MAGENTA);
+        Ellipse2D ellipse = new Ellipse2D.Double(-3.0, -3.0, 6.0, 6.0);
+        labelsRenderer.setSeriesShape(0, ellipse);
+        labelsRenderer.setSeriesShape(1, ellipse);
+        mainPlot.setRenderer(1, labelsRenderer);
+
+//        final long ONE_DAY = 24 * 60 * 60 * 1000;
+//        XYLineAndShapeRenderer maRenderer = new XYLineAndShapeRenderer(true, false);
+//        XYDataset maDataset  = MovingAverage.createMovingAverage(priceDataset, "MA", 200 * ONE_DAY, 0);
+//        mainPlot.setRenderer(2, maRenderer);
+//        mainPlot.setDataset (2, maDataset);
+
+        renderer.setSeriesPaint(0, Color.BLACK);
+        renderer.setDrawVolume(false);
+        rangeAxis.setAutoRangeIncludesZero(false);
+
+        JFreeChart chart = new JFreeChart(Config.shared.product.productName, null, mainPlot, false);
         chart.setTitle(barDataSeries.product.productName + " Training Data");
 
         return chart;
