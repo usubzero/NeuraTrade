@@ -9,6 +9,7 @@ public class BarDataPoint {
 
     public double rsi;
     public double macd;
+    public double fngIndex;
 
     public BarAction barAction;
 

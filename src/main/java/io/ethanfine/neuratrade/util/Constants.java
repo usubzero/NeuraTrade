@@ -19,4 +19,8 @@ public class Constants {
         return "products/" + product.productName + "/candles?start=" + isoStart  + "&end=" + isoEnd + "&granularity=" + timeGranularity.seconds;
     }
 
+    public static String FNG_API_DATA(int valueCount) {
+        return "https://api.alternative.me/fng/?limit=" + valueCount;
+    }
+
 }

@@ -12,7 +12,7 @@ public class Config {
     Trade parameters
      */
     public CBProduct product = CBProduct.BTCUSD;
-    public CBTimeGranularity timeGranularity = CBTimeGranularity.HOUR;
+    public CBTimeGranularity timeGranularity = CBTimeGranularity.DAY;
     public ChartBarCount chartBarCount = ChartBarCount.HUNDRED_TWO;
     public int rsiCalculationTickCount = 14;
 

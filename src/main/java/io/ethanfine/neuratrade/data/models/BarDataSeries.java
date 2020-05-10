@@ -2,6 +2,8 @@ package io.ethanfine.neuratrade.data.models;
 
 import io.ethanfine.neuratrade.Config;
 import io.ethanfine.neuratrade.coinbase.models.CBProduct;
+import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
+import io.ethanfine.neuratrade.external_data.FNGPublicData;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.indicators.MACDIndicator;
 import org.ta4j.core.indicators.RSIIndicator;
@@ -10,10 +12,13 @@ import org.ta4j.core.indicators.helpers.HighPriceIndicator;
 import org.ta4j.core.indicators.helpers.LowPriceIndicator;
 
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.Set;
 
 public class BarDataSeries {
 
     public CBProduct product;
+    CBTimeGranularity timeGranularity;
 
     private ArrayList<BarDataPoint> barDataArray;
 
@@ -24,9 +29,10 @@ public class BarDataSeries {
     public LowPriceIndicator lowestPriceIndicator;
     public HighPriceIndicator highPriceIndicator;
 
-    public BarDataSeries(CBProduct product, BarSeries barSeries) {
+    public BarDataSeries(CBProduct product, BarSeries barSeries, CBTimeGranularity timeGranularity) {
         this.product = product;
         this.barDataArray = new ArrayList<>();
+        this.timeGranularity = timeGranularity;
 
         closePriceIndicator = new ClosePriceIndicator(barSeries);
         rsiIndicator = new RSIIndicator(closePriceIndicator, Config.shared.rsiCalculationTickCount);
@@ -37,11 +43,29 @@ public class BarDataSeries {
         for (int i = 0; i < barSeries.getBarCount(); i++) {
             BarDataPoint bdp = new BarDataPoint(barSeries.getBar(i), this); // TODO: watch out for strong reference cycles
             bdp.rsi = rsiIndicator.getValue(i).doubleValue();
-            bdp.macd = macdIndicator.getValue(i).doubleValue(); // TODO: MACD isn't giving the macd values we want
+            bdp.macd = macdIndicator.getValue(i).doubleValue();
             barDataArray.add(bdp);
         }
 
         labelBarActions();
+        if (timeGranularity == CBTimeGranularity.DAY) {
+            int fngDataPointCount = 830;
+            Map<Long, Integer> fngDataPoints = FNGPublicData.getFNGIndexDataPoints(fngDataPointCount);
+            if (fngDataPoints.size() < fngDataPointCount) {
+                System.out.println("Could not assign fear and greed index values to day bar data series." + fngDataPoints.size());
+                return;
+            }
+
+            Integer[] fngDataPointValues = (Integer[]) fngDataPoints.values().toArray();
+
+            int bdpI = 0;
+            for (int i = 0; i < fngDataPoints.size(); i++) {
+                if (i >= fngDataPointCount - barSeries.getBarCount() - 1) {
+                    bdpI++;
+                }
+                barDataArray.get(bdpI).fngIndex = fngDataPointValues[i];
+            }
+        }
     }
 
     public int getBarCount() {
@@ -52,35 +76,35 @@ public class BarDataSeries {
         return barDataArray.get(i);
     }
 
-    public BarDataPoint getBarDataPointWithLowestLow() {
-        BarDataPoint lowestLow = null;
-        for (int i = 0; i < barDataArray.size(); i++) {
-            BarDataPoint bdp = getBarDataPoint(i);
-            if (lowestLow == null) {
-                lowestLow = bdp;
-            } else {
-                if (lowestPriceIndicator.getValue(i).doubleValue() < lowestLow.bar.getLowPrice().doubleValue()) {
-                    lowestLow = bdp;
-                }
-            }
-        }
-        return lowestLow;
-    }
-
-    public BarDataPoint getBarDataPointWithHighestHigh() {
-        BarDataPoint highestHigh = null;
-        for (int i = 0; i < barDataArray.size(); i++) {
-            BarDataPoint bdp = getBarDataPoint(i);
-            if (highestHigh == null) {
-                highestHigh = bdp;
-            } else {
-                if (lowestPriceIndicator.getValue(i).doubleValue() > highestHigh.bar.getLowPrice().doubleValue()) {
-                    highestHigh = bdp;
-                }
-            }
-        }
-        return highestHigh;
-    }
+//    public BarDataPoint getBarDataPointWithLowestLow() {
+//        BarDataPoint lowestLow = null;
+//        for (int i = 0; i < barDataArray.size(); i++) {
+//            BarDataPoint bdp = getBarDataPoint(i);
+//            if (lowestLow == null) {
+//                lowestLow = bdp;
+//            } else {
+//                if (lowestPriceIndicator.getValue(i).doubleValue() < lowestLow.bar.getLowPrice().doubleValue()) {
+//                    lowestLow = bdp;
+//                }
+//            }
+//        }
+//        return lowestLow;
+//    }
+//
+//    public BarDataPoint getBarDataPointWithHighestHigh() {
+//        BarDataPoint highestHigh = null;
+//        for (int i = 0; i < barDataArray.size(); i++) {
+//            BarDataPoint bdp = getBarDataPoint(i);
+//            if (highestHigh == null) {
+//                highestHigh = bdp;
+//            } else {
+//                if (lowestPriceIndicator.getValue(i).doubleValue() > highestHigh.bar.getLowPrice().doubleValue()) {
+//                    highestHigh = bdp;
+//                }
+//            }
+//        }
+//        return highestHigh;
+//    }
 
     private void labelBarActions() {
         double volatilityThreshold = Config.shared.timeGranularity.buySellMinVolatility();

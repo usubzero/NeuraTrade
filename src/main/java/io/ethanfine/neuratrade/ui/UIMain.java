@@ -9,10 +9,16 @@ import io.ethanfine.neuratrade.data.models.BarDataPoint;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
 import io.ethanfine.neuratrade.ui.models.ChartBarCount;
 import io.ethanfine.neuratrade.util.Util;
+import org.jfree.chart.ChartMouseEvent;
+import org.jfree.chart.ChartMouseListener;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.entity.ChartEntity;
+import org.jfree.chart.labels.CrosshairLabelGenerator;
+import org.jfree.chart.panel.CrosshairOverlay;
+import org.jfree.chart.plot.Crosshair;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.CandlestickRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
@@ -59,7 +65,7 @@ public class UIMain implements ActionListener {
         loadParametersPanel();
 
         BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(Config.shared.product, Config.shared.chartBarCount.value, Config.shared.timeGranularity);
-        BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries);
+        BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries, Config.shared.timeGranularity);
         initiateChart(recentBarDataSeries);
 
         beginRefreshCycle();
@@ -117,6 +123,21 @@ public class UIMain implements ActionListener {
         chartPanel = new ChartPanel(chart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         chartPanel.setBackground(Color.WHITE);
+        chartPanel.setHorizontalAxisTrace(true);
+        chartPanel.setVerticalAxisTrace(true);
+        chartPanel.addChartMouseListener(new ChartMouseListener() {
+
+            @Override
+            public void chartMouseClicked(ChartMouseEvent e) {
+                final ChartEntity entity = e.getEntity();
+                System.out.println(entity + " " + entity.getArea());
+            }
+
+            @Override
+            public void chartMouseMoved(ChartMouseEvent e) {
+            }
+        });
+
         frame.getContentPane().add(chartPanel, BorderLayout.CENTER);
     }
 
@@ -186,7 +207,6 @@ public class UIMain implements ActionListener {
 
         JFreeChart chart = new JFreeChart(Config.shared.product.productName, null, mainPlot, false);
         chart.setTitle(barDataSeries.product.productName + " Training Data");
-
         return chart;
     }
 
@@ -205,7 +225,7 @@ public class UIMain implements ActionListener {
         if (chartPanel != null) {
             frame.remove(chartPanel);
         }
-        BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries);
+        BarDataSeries recentBarDataSeries = new BarDataSeries(Config.shared.product, recentBarSeries, Config.shared.timeGranularity);
         initiateChart(recentBarDataSeries);
     }
 
@@ -213,7 +233,7 @@ public class UIMain implements ActionListener {
         new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(2000 ); /* TODO: find suitable time; must be > 1000ms if retrieving bar series
+                    Thread.sleep(20000 ); /* TODO: find suitable time; must be > 1000ms if retrieving bar series
                     due to API restrictions, but would want to change so that bar series isn't retrieved every time ticker is */
                     refreshUIDynamicElements();
                 } catch (Exception e) {
