@@ -56,12 +56,15 @@ public class BarDataSeries {
                 return;
             }
 
-            Integer[] fngDataPointValues = (Integer[]) fngDataPoints.values().toArray();
+            Integer[] fngDataPointValues = fngDataPoints.values().toArray(new Integer[fngDataPoints.size()]);
 
             int bdpI = 0;
             for (int i = 0; i < fngDataPoints.size(); i++) {
                 if (i >= fngDataPointCount - barSeries.getBarCount() - 1) {
                     bdpI++;
+                }
+                if (barDataArray.size() == bdpI) {
+                    break;
                 }
                 barDataArray.get(bdpI).fngIndex = fngDataPointValues[i];
             }

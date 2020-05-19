@@ -202,7 +202,7 @@ public class UIMain implements ActionListener {
 //        mainPlot.setDataset (2, maDataset);
 
         renderer.setSeriesPaint(0, Color.BLACK);
-        renderer.setDrawVolume(false);
+        renderer.setDrawVolume(true);
         rangeAxis.setAutoRangeIncludesZero(false);
 
         JFreeChart chart = new JFreeChart(Config.shared.product.productName, null, mainPlot, false);
