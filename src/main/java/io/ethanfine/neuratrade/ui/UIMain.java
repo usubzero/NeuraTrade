@@ -18,6 +18,7 @@ import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.entity.ChartEntity;
 import org.jfree.chart.labels.CrosshairLabelGenerator;
 import org.jfree.chart.panel.CrosshairOverlay;
+import org.jfree.chart.plot.CombinedDomainXYPlot;
 import org.jfree.chart.plot.Crosshair;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.CandlestickRenderer;
@@ -118,7 +119,8 @@ public class UIMain implements ActionListener {
 
         AbstractXYDataset priceDataset = createPriceDataSet(barDataSeries);
         XYDataset labelsDataset = createTrainingChartDataset(barDataSeries);
-        JFreeChart chart = createChart(barDataSeries, priceDataset, labelsDataset);
+        XYDataset fngDataset = createFNGDataset(barDataSeries);
+        JFreeChart chart = createChart(barDataSeries, priceDataset, labelsDataset,  fngDataset, Config.shared.timeGranularity);
 
         chartPanel = new ChartPanel(chart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
@@ -179,13 +181,24 @@ public class UIMain implements ActionListener {
         return dataset;
     }
 
-    private JFreeChart createChart(BarDataSeries barDataSeries, AbstractXYDataset priceDataset, XYDataset labelsDataset) {
+    private XYDataset createFNGDataset(BarDataSeries barDataSeries) {
+        XYSeries fngPoints = new XYSeries(barDataSeries.product.productName + " FNG Index");
+        for (int i = 0; i < barDataSeries.getBarCount(); i++) {
+            BarDataPoint bdpI = barDataSeries.getBarDataPoint(i);
+            fngPoints.add(bdpI.bar.getBeginTime().toEpochSecond() * 1000, bdpI.fngIndex);
+        }
+        XYSeriesCollection dataset = new XYSeriesCollection();
+        dataset.addSeries(fngPoints);
+        return dataset;
+    }
+
+    private JFreeChart createChart(BarDataSeries barDataSeries, AbstractXYDataset priceDataset, XYDataset labelsDataset, XYDataset fngDataset, CBTimeGranularity timeGranularity) {
         DateAxis domainAxis = new DateAxis("Date");
-        NumberAxis  rangeAxis = new NumberAxis("Price");
-        CandlestickRenderer renderer = new CandlestickRenderer();
 
-        XYPlot mainPlot = new XYPlot(priceDataset, domainAxis, rangeAxis, renderer);
+        NumberAxis priceRangeAxis = new NumberAxis("Price");
+        CandlestickRenderer priceRenderer = new CandlestickRenderer();
 
+        final XYPlot mainPlot = new XYPlot(priceDataset, domainAxis, priceRangeAxis, priceRenderer);
         mainPlot.setDataset(1, labelsDataset);
         XYLineAndShapeRenderer labelsRenderer = new XYLineAndShapeRenderer(false, true);
         labelsRenderer.setSeriesPaint(0, Color.BLUE);
@@ -201,11 +214,27 @@ public class UIMain implements ActionListener {
 //        mainPlot.setRenderer(2, maRenderer);
 //        mainPlot.setDataset (2, maDataset);
 
-        renderer.setSeriesPaint(0, Color.BLACK);
-        renderer.setDrawVolume(true);
-        rangeAxis.setAutoRangeIncludesZero(false);
+        priceRenderer.setSeriesPaint(0, Color.BLACK);
+        priceRenderer.setDrawVolume(true);
+        priceRangeAxis.setAutoRangeIncludesZero(false);
 
-        JFreeChart chart = new JFreeChart(Config.shared.product.productName, null, mainPlot, false);
+        XYPlot fngPlot = null;
+        if (timeGranularity == CBTimeGranularity.DAY) {
+            XYLineAndShapeRenderer fngRenderer = new XYLineAndShapeRenderer();
+            NumberAxis fngRangeAxis = new NumberAxis("FNG Index");
+            fngPlot = new XYPlot(fngDataset, domainAxis, fngRangeAxis, fngRenderer);
+            fngRangeAxis.setAutoRangeIncludesZero(false);
+            fngRenderer.setSeriesShape(0, new Rectangle(1, 1));
+        }
+
+        final CombinedDomainXYPlot plot = new CombinedDomainXYPlot(domainAxis);
+        plot.setGap(10);
+        plot.add(mainPlot, 5);
+        if (timeGranularity == CBTimeGranularity.DAY) {
+            plot.add(fngPlot, 1);
+        }
+
+        final JFreeChart chart = new JFreeChart(Config.shared.product.productName, null, plot, false);
         chart.setTitle(barDataSeries.product.productName + " Training Data");
         return chart;
     }

@@ -27,6 +27,7 @@ public class NeuraTrade {
         for (Map.Entry<Long, Integer> fngDataPoint : fngDataPoints.entrySet()) {
             System.out.println("EPOCH: " + new Date(fngDataPoint.getKey() * 1000) + ", FNG Index: " + fngDataPoint.getValue());
         }
+        
         new UIMain();
     }
 
