@@ -13,10 +13,16 @@ public class Constants {
     public static String CB_API_ENDPOINT_TICKER(CBProduct product) {
         return "products/" + product.productName + "/ticker";
     }
-    public static String CB_API_ENDPOINT_HISTORIC_RATES(CBProduct product, long start, long end, CBTimeGranularity timeGranularity) {
+    public static String CB_API_ENDPOINT_HISTORIC_RATES(CBProduct product,
+                                                        long start,
+                                                        long end,
+                                                        CBTimeGranularity timeGranularity) {
         String isoStart = Util.convertToIsoFromEpoch(start);
         String isoEnd = Util.convertToIsoFromEpoch(end);
-        return "products/" + product.productName + "/candles?start=" + isoStart  + "&end=" + isoEnd + "&granularity=" + timeGranularity.seconds;
+        return "products/" + product.productName +
+                "/candles?start=" + isoStart  +
+                "&end=" + isoEnd +
+                "&granularity=" + timeGranularity.seconds;
     }
 
     public static String FNG_API_DATA(int valueCount) {

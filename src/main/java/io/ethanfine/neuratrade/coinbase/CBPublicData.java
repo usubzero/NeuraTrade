@@ -137,8 +137,8 @@ public class CBPublicData {
     }
 
     public static BarSeries getRecentBarSeries(CBProduct product, int barCount, CBTimeGranularity timeGranularity) {
-        long endTime = getCBTime();
-        return getBarSeries(product, barCount, endTime, timeGranularity);
+        Long endTime = getCBTime();
+        return endTime == null ? null : getBarSeries(product, barCount, endTime, timeGranularity);
     }
 
 }

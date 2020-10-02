@@ -13,7 +13,6 @@ import org.ta4j.core.indicators.helpers.LowPriceIndicator;
 
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.Set;
 
 public class BarDataSeries {
 
@@ -52,7 +51,7 @@ public class BarDataSeries {
             int fngDataPointCount = 830;
             Map<Long, Integer> fngDataPoints = FNGPublicData.getFNGIndexDataPoints(fngDataPointCount);
             if (fngDataPoints.size() < fngDataPointCount) {
-                System.out.println("Could not assign fear and greed index values to day bar data series." + fngDataPoints.size());
+                System.out.println("Could not assign fear and greed index values to day bar data series.");
                 return;
             }
 
@@ -125,10 +124,14 @@ public class BarDataSeries {
                 BarDataPoint localPeriodHighBDP = null;
                 BarDataPoint localPeriodLowBDP = null;
                 for (BarDataPoint localPeriodBDP : bdpsInLocalPeriod) {
-                    if (localPeriodHighBDP == null || localPeriodBDP.bar.getHighPrice().doubleValue() > localPeriodHighBDP.bar.getHighPrice().doubleValue()) {
+                    if (localPeriodHighBDP == null ||
+                            localPeriodBDP.bar.getHighPrice().doubleValue() >
+                                    localPeriodHighBDP.bar.getHighPrice().doubleValue()) {
                         localPeriodHighBDP = localPeriodBDP;
                     }
-                    if (localPeriodLowBDP == null || localPeriodBDP.bar.getLowPrice().doubleValue() < localPeriodLowBDP.bar.getLowPrice().doubleValue()) {
+                    if (localPeriodLowBDP == null ||
+                            localPeriodBDP.bar.getLowPrice().doubleValue() <
+                                    localPeriodLowBDP.bar.getLowPrice().doubleValue()) {
                         localPeriodLowBDP = localPeriodBDP;
                     }
                 }

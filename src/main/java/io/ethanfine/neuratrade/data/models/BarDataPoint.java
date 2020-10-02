@@ -19,7 +19,8 @@ public class BarDataPoint {
     }
 
     public double volatility() {
-        return ((bar.getHighPrice().doubleValue() - bar.getLowPrice().doubleValue()) / bar.getLowPrice().doubleValue()) * 100;
+        return ((bar.getHighPrice().doubleValue() - bar.getLowPrice().doubleValue())
+                / bar.getLowPrice().doubleValue()) * 100;
     }
 
 }

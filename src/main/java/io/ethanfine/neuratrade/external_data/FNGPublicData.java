@@ -9,8 +9,6 @@ import org.json.simple.parser.JSONParser;
 import org.riversun.promise.SyncPromise;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicIntegerArray;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class FNGPublicData {
 
@@ -36,12 +34,17 @@ public class FNGPublicData {
                             Iterator iterator = slideContent.iterator();
                             while (iterator.hasNext()) {
                                 JSONObject dataPoint = (JSONObject) iterator.next();
-                                dataPointMap.put(Long.valueOf((String) dataPoint.get("timestamp")), Integer.valueOf((String) dataPoint.get("value")));
+                                dataPointMap.put(
+                                        Long.valueOf((String) dataPoint.get("timestamp")),
+                                        Integer.valueOf((String) dataPoint.get("value"))
+                                );
                             }
                             action.resolve();
                         } catch (Exception e) {
                             action.reject();
-                            throw new NetworkRequestException("Failed to parse response from request with URL " + fgdAPIDataString);
+                            throw new NetworkRequestException(
+                                    "Failed to parse response from request with URL " + fgdAPIDataString
+                            );
                         }
                     } else {
                         action.reject();

@@ -3,7 +3,6 @@ package io.ethanfine.neuratrade.networking;
 import io.ethanfine.neuratrade.networking.exceptions.NetworkRequestException;
 import io.ethanfine.neuratrade.util.Constants;
 import org.riversun.promise.Func;
-import org.riversun.promise.Promise;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -48,10 +47,14 @@ public class NetworkingManager {
 
                     action.resolve(response.toString());
                 } else {
-                    throw new NetworkRequestException("Erroneous response code " + responseCode + " for request with URL " + url.toString());
+                    throw new NetworkRequestException(
+                            "Erroneous response code " + responseCode + " for request with URL " + url.toString()
+                    );
                 }
             } catch (Exception e) {
-                throw new NetworkRequestException("IOException occurred when attempting to fulfill request with URL " + url.toString());
+                throw new NetworkRequestException(
+                        "IOException occurred when attempting to fulfill request with URL " + url.toString()
+                );
             }
         };
     }
