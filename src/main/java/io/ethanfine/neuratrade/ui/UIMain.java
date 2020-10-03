@@ -129,7 +129,7 @@ public class UIMain implements ActionListener {
 
     /**
      * Instantiates a JPanel that allows for interactions with the Config parameters of product, bar count, and
-     * time granularity. Adds such panel to the frame.
+     * time granularity. Adds such panel to the frame and all parameter JComboBox selectors to the panel.
      */
     private void loadParametersPanel() {
         parametersPanel = new JPanel();
@@ -143,8 +143,11 @@ public class UIMain implements ActionListener {
         parametersPanel.add(granularitySelector, BorderLayout.EAST);
     }
 
-    /*
-    Precondition: selectedVal is in values
+    /**
+     * Instantiates a JComboBox with values as the options available and selectedVal as the default selected option.
+     * Precondition: selectedVal is in values
+     * @param values the options available on the JComboBox
+     * @param selectedVal the default option selected on the JComboBox
      */
     private JComboBox loadParametersPanelSelector(Object[] values, Object selectedVal) {
         JComboBox selector = new JComboBox(values);
@@ -153,6 +156,12 @@ public class UIMain implements ActionListener {
         return selector;
     }
 
+    // TODO: move several methods below into model class
+    /**
+     * Initiate a ChartPanel based off a chart created that contains a price data set, a training data labels data set,
+     * and potentially a fear and greed data set. This ChartPanel is configured and the chart is added to the frame.
+     * @param barDataSeries The BarDataSeries to base the data off to create the chart.
+     */
     private void initiateChart(BarDataSeries barDataSeries) {
         AbstractXYDataset priceDataset = createPriceDataSet(barDataSeries);
         XYDataset labelsDataset = createTrainingChartDataset(barDataSeries);
@@ -180,9 +189,14 @@ public class UIMain implements ActionListener {
         frame.getContentPane().add(chartPanel, BorderLayout.CENTER);
     }
 
+    /**
+     * Create an XY-Dataset for price data. This dataset contains time on the X axis and
+     * (open, high, low, close, and volume) on the Y axis for every bar in barDataSeries.
+     * @param barDataSeries the BarDataSeries to base the dataset on.
+     * @return The XY-Dataset as an AbstractXYDataset.
+     */
     private AbstractXYDataset createPriceDataSet(BarDataSeries barDataSeries) {
         OHLCDataItem[] data  = new OHLCDataItem[barDataSeries.getBarCount()];
-
         for (int i = 0; i < barDataSeries.getBarCount(); i++) {
             BarDataPoint bdpI = barDataSeries.getBarDataPoint(i);
             data[i] = new OHLCDataItem(Date.from(bdpI.bar.getBeginTime().toInstant()),
@@ -197,6 +211,14 @@ public class UIMain implements ActionListener {
         return new DefaultOHLCDataset(Config.shared.product + " Prices", data);
     }
 
+    /**
+     * Create an XY-Dataset with a buy series and a sell series. The buy series is based on the BarDataPoints where
+     * barDataSeries would buy the product corresponding to barDataSeries. The sell series is the same as the buy series
+     * but for the sell BarAction.  The points in the buy and sell series contain time on the X axis and a price to
+     * buy or sell at on the Y axis.
+     * @param barDataSeries the BarDataSeries to base the dataset on.
+     * @return The XY-Dataset containing a buy series and a sell series as an XYDataSet.
+     */
     private XYDataset createTrainingChartDataset(BarDataSeries barDataSeries) {
         XYSeries buySeries = new XYSeries(barDataSeries.product.productName + " Buys");
         XYSeries sellSeries = new XYSeries(barDataSeries.product.productName + " Sells");
@@ -218,6 +240,13 @@ public class UIMain implements ActionListener {
         return dataset;
     }
 
+    /**
+     * Create an XY-Dataset with a fear and greed series. The fear and greed series is composed of hte fear and greed
+     * index value for every bar in barDataSeries. The points in the fear and greed series contain time on the X axis
+     * and the fear and greed index values on the Y axis.
+     * @param barDataSeries the BarDataSeries to base the dataset on.
+     * @return The XY-Dataset containing a fear and greed index series as an XYDataSet.
+     */
     private XYDataset createFNGDataset(BarDataSeries barDataSeries) {
         XYSeries fngPoints = new XYSeries(barDataSeries.product.productName + " FNG Index");
         for (int i = 0; i < barDataSeries.getBarCount(); i++) {
@@ -229,6 +258,19 @@ public class UIMain implements ActionListener {
         return dataset;
     }
 
+    /**
+     * Create a JFreeChart that displays priceDataSet, labelsDataSet, and potentially fngDataset. priceDataSet is
+     * displayed as candlestick bars, labelsSet is displayed with blue circles on the buy prices and pink circles on the
+     * sell prices, and fngDataset is displayed only if the timeGranularity is the DAY CBTimeGranularity and is
+     * displayed as a subplot plotting time on the X axis vs fear and greed index values on the Y axis. The main plot
+     * displays time on the X axis and the range of prices in barDataSeries on the Y axis.
+     * @param barDataSeries the BarDataSeries to construct the chart based on.
+     * @param priceDataset the priceDataset to construct the chart based on and to include in the main plot.
+     * @param labelsDataset the labelsDataset to include in the main plot.
+     * @param fngDataset the fngDataset to potentially construct a subplot to be included in the chart.
+     * @param timeGranularity the timeGranularity of each bar.
+     * @return the JFreeChart created with the main plot and potentially a subplot.
+     */
     private JFreeChart createChart(BarDataSeries barDataSeries,
                                    AbstractXYDataset priceDataset,
                                    XYDataset labelsDataset,
@@ -284,6 +326,10 @@ public class UIMain implements ActionListener {
         return chart;
     }
 
+    /**
+     * Update the data displayed on all UI elements. Retrieve new data and display relevant data on the ticker price
+     * label, on the RSI label, and refresh the chart panel by removing it and generating a new one.
+     */
     private void refreshUIDynamicElements() {
         Double tickerPrice = CBPublicData.getTickerPrice(Config.shared.product);
         String newLabelTitle = (tickerPrice == null) ?
@@ -317,6 +363,10 @@ public class UIMain implements ActionListener {
         initiateChart(recentBarDataSeries);
     }
 
+    /**
+     * Create a thread which sleeps other than every 20 seconds, when it is awake simply to refresh the dynamic elements
+     * of the UI.
+     */
     private void beginRefreshCycle() {
         new Thread(() -> {
             while (true) {
@@ -332,6 +382,10 @@ public class UIMain implements ActionListener {
         }).start();
     }
 
+    /**
+     * Detect actions on the chart panel.
+     * @param e the action that was performed onn the panel.
+     */
     @Override
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == productSelector) {
