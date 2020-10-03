@@ -4,6 +4,9 @@ import io.ethanfine.neuratrade.Config;
 
 public enum CBTimeGranularity {
 
+    /**
+     * Possible time granularities enumerated along with their respective representation in seconds.
+     */
     MINUTE(60),
     MINUTE_FIVE(300),
     MINUTE_FIFTEEN(900),
@@ -17,6 +20,11 @@ public enum CBTimeGranularity {
         this.seconds = seconds;
     }
 
+    /**
+     * This method gives the minimum percent difference between any successive pair of buy and sell orders in
+     * generating training data. This will be defined as the buySellMinVolatility.
+     * @return buySellMinVolatility.
+     */
     public double buySellMinVolatility() {
         switch (this) {
             case MINUTE_FIVE:

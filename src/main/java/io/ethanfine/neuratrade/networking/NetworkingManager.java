@@ -12,8 +12,10 @@ import java.net.URL;
 
 public class NetworkingManager {
 
-    /*
-    Returns the HTTP response for the request as a String
+    /**
+     * Executes a GET request from the URL represented by urlString. Then a Func representation of such
+     * request is formed so that this request can be resolved within a Promise.
+     * @param urlString The URL to which the GET request should be made.
      */
     public static Func performGetRequest(String urlString) {
         return (action, data) -> {

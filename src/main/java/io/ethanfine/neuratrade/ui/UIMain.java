@@ -46,8 +46,8 @@ public class UIMain implements ActionListener {
     JComboBox barCountSelector;
     JComboBox granularitySelector;
 
-    /*
-    Instantiates a JFrame for the app, loads the frames content, and makes this frame visible.
+    /**
+     * Instantiates a JFrame for the app, loads the frames content, and makes this frame visible.
      */
     public UIMain() {
         frame = new JFrame("NeuraTrade");
@@ -59,9 +59,9 @@ public class UIMain implements ActionListener {
         frame.setVisible(true);
     }
 
-    /*
-    Loads the ticker price and RSI labels along with the parameters panel. Then initializes a chart based off the
-    most recent bar series and begins the UI refresh cycle.
+    /**
+     * Loads the ticker price and RSI labels along with the parameters panel. Then initializes a chart based off the
+     * most recent bar series and begins the UI refresh cycle.
      */
     private void loadFrameContent() {
         loadTickerPriceLabel();
@@ -83,6 +83,10 @@ public class UIMain implements ActionListener {
         beginRefreshCycle();
     }
 
+    /**
+     * Retrieves the ticker price for the product selected in Config, creates a JLabel with the price as
+     * such label's title, and adds the label to the frame.
+     */
     private void loadTickerPriceLabel() {
         Double tickerPrice = CBPublicData.getTickerPrice(Config.shared.product);
 
@@ -97,6 +101,10 @@ public class UIMain implements ActionListener {
         frame.add(priceLabel, BorderLayout.NORTH);
     }
 
+    /**
+     * Retrieves the most recent bar series for the product selected in Config, creates a JLabel with the RSI value
+     * calculated from such bar series as such label's title, and adds the label to the frame.
+     */
     private void loadRSILabel() {
         BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(
                 Config.shared.product,
@@ -119,6 +127,10 @@ public class UIMain implements ActionListener {
         frame.add(rsiLabel, BorderLayout.EAST);
     }
 
+    /**
+     * Instantiates a JPanel that allows for interactions with the Config parameters of product, bar count, and
+     * time granularity. Adds such panel to the frame.
+     */
     private void loadParametersPanel() {
         parametersPanel = new JPanel();
         parametersPanel.setPreferredSize(new Dimension(400, 40));

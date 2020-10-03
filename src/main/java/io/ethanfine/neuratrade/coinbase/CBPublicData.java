@@ -20,8 +20,9 @@ import org.ta4j.core.*;
 
 public class CBPublicData {
 
-    /*
-    Get the epoch time (in seconds) from Coinbase Pro
+    /**
+     * Get the epoch time (in seconds) from Coinbase Pro.
+     * @return Current epoch time.
      */
     public static Long getCBTime() {
         String cbAPIEndPtUrlString = Constants.CB_API_URL + Constants.CB_API_ENDPOINT_TIME;
@@ -48,6 +49,11 @@ public class CBPublicData {
         return (epochTime.get() == -1) ? null : epochTime.get();
     }
 
+    /**
+     * Get the current price for a product from Coinbase Pro.
+     * @param product Which product to get the current price for.
+     * @return Current price of product.
+     */
     public static Double getTickerPrice(CBProduct product) {
         String cbAPIEndPtUrlString = Constants.CB_API_URL + Constants.CB_API_ENDPOINT_TICKER(product);
         AtomicReference<Double> price = new AtomicReference<>(-1.0);
@@ -73,6 +79,14 @@ public class CBPublicData {
         return (price.get() == -1) ? null : price.get();
     }
 
+    /**
+     * Retrieve data from Coinbase Pro in order to generate a bar series.
+     * @param product Which product to generate a bar series for.
+     * @param startTime The open time in epoch seconds of the first bar in the series.
+     * @param endTime The open time in epoch seconds of the last bar in the series.
+     * @param timeGranularity The amount of time each bar in the series should represent.
+     * @return A bar series that is described by the respective arguments.
+     */
     public static BarSeries getBarSeries(CBProduct product, long startTime, long endTime, CBTimeGranularity timeGranularity) {
         // Cap the number of bars to 300 due to API restrictions
         if (((endTime - startTime) / timeGranularity.seconds) > 300) {
@@ -126,16 +140,39 @@ public class CBPublicData {
         return barSeries;
     }
 
+    /**
+     * Retrieve data from Coinbase Pro in order to generate a bar series.
+     * @param product Which product to generate a bar series for.
+     * @param startTime The open time in epoch seconds of the first bar in the series.
+     * @param barCount The number of bars that should be in the series.
+     * @param timeGranularity The amount of time each bar in the series should represent.
+     * @return A bar series that is described by the respective arguments.
+     */
     public static BarSeries getBarSeries(CBProduct product, long startTime, int barCount, CBTimeGranularity timeGranularity) {
         long endTime = startTime + barCount * timeGranularity.seconds;
         return getBarSeries(product, startTime, endTime, timeGranularity);
     }
 
+    /**
+     * Retrieve data from Coinbase Pro in order to generate a bar series.
+     * @param product Which product to generate a bar series for.
+     * @param barCount The number of bars that should be in the series.
+     * @param endTime The open time in epoch seconds of the last bar in the series.
+     * @param timeGranularity The amount of time each bar in the series should represent.
+     * @return A bar series that is described by the respective arguments.
+     */
     public static BarSeries getBarSeries(CBProduct product, int barCount, long endTime, CBTimeGranularity timeGranularity) {
         long startTime = endTime - barCount * timeGranularity.seconds;
         return getBarSeries(product, startTime, endTime, timeGranularity);
     }
 
+    /**
+     * Retrieve data from Coinbase Pro in order to generate a bar series with the most recent data.
+     * @param product Which product to generate a bar series for.
+     * @param barCount The number of bars that should be in the series.
+     * @param timeGranularity The amount of time each bar in the series should represent.
+     * @return A bar series that is described by the respective arguments.
+     */
     public static BarSeries getRecentBarSeries(CBProduct product, int barCount, CBTimeGranularity timeGranularity) {
         Long endTime = getCBTime();
         return endTime == null ? null : getBarSeries(product, barCount, endTime, timeGranularity);
