@@ -10,11 +10,22 @@ import java.util.Date;
 
 public class Util {
 
+    /**
+     * Convert epoch seconds to an ISO-formatted String of date format yyyy-MM-dd'T'HH:mmXXX.
+     * @param epochSeconds the epoch second value to convert.
+     * @return an ISO-formatted representation of epochSeconds.
+     */
     public static String convertToIsoFromEpoch(long epochSeconds) {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmXXX");
         return df.format(new Date(epochSeconds * 1000));
     }
 
+    /**
+     * Format a double d to be represented as a String with decimalPlaceCount decimal places displayed.
+     * @param d double to create the String representation from.
+     * @param decimalPlaceCount the number of decimal places in the String representation of d.
+     * @return A String representation of d with decimalPlaceCount decimal places.
+     */
     public static String formatDouble(double d, int decimalPlaceCount) {
         String decimalPlaces = new String(new char[decimalPlaceCount]).replace("\0", "#");
         DecimalFormat df = new DecimalFormat("#." + decimalPlaces);
@@ -22,6 +33,12 @@ public class Util {
         return df.format(d);
     }
 
+    /**
+     * Create a deep array from a String that is formatted as a deep array of values that can be converted to doubles.
+     * For example, the String "[[3], [1, 4]]" will be converted to the double array [[3], [1, 4]].
+     * @param str String that is formatted as a deep array of values that can be converted to doubles to convert.
+     * @return a deep array of doubles extrapolated from the representation of the array, str.
+     */
     public static double[][] stringToDeep(String str) {
         try {
             str = str.substring(2, str.length() - 3);

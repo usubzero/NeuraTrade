@@ -8,16 +8,16 @@ public class Config {
 
     public static Config shared;
 
-    /*
-    Trade parameters
+    /**
+     * Trade parameters
      */
     public CBProduct product = CBProduct.BTCUSD;
     public CBTimeGranularity timeGranularity = CBTimeGranularity.DAY;
     public ChartBarCount chartBarCount = ChartBarCount.HUNDRED_TWO;
     public int rsiCalculationTickCount = 14;
 
-    /*
-    Training data generation parameters
+    /**
+     * Training data generation parameters
      */
     public double minsTimeGranularityBuySellMinVolatility = 1;
     public double minsFiveTimeGranularityBuySellMinVolatility = 1;
@@ -26,11 +26,13 @@ public class Config {
     public double hourSixTimeGranularityBuySellMinVolatility = 6;
     public double dayTimeGranularityBuySellMinVolatility = 7;
 
-    // Whether or not to remove repetitive buy or sell signals
+    /**
+     * Whether or not to remove repetitive buy or sell signals
+     */
     public boolean filterRepetitiveSignals = false;
 
-    /*
-    API parameters
+    /**
+     * API parameters
      */
 //    public int tickerUpdatesPerSecond = 5;
 

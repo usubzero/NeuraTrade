@@ -111,6 +111,7 @@ public class CBPublicData {
             return barSeries;
         }
 
+        System.out.println("GET_RESPONSE: " +  get_response.get());
         double[][] bars = Util.stringToDeep(get_response.get());
         for (double[] bar : bars) {
             ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(Instant.ofEpochSecond((long) bar[0]), ZoneId.systemDefault());
