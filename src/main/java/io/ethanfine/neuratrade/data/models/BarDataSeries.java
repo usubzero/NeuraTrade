@@ -19,9 +19,9 @@ public class BarDataSeries {
     public CBProduct product;
     CBTimeGranularity timeGranularity;
 
-    private ArrayList<BarDataPoint> barDataArray;
+    private final ArrayList<BarDataPoint> barDataArray;
 
-    // Indicators for series
+    // Indicators derived from the BarDataPoints in barDataArray
     public RSIIndicator rsiIndicator;
     public MACDIndicator macdIndicator;
     public ClosePriceIndicator closePriceIndicator;
@@ -39,14 +39,32 @@ public class BarDataSeries {
         lowestPriceIndicator = new LowPriceIndicator(barSeries);
         highPriceIndicator = new HighPriceIndicator(barSeries);
 
+        mapBarsToBarDataPoints(barSeries);
+        labelBarActions();
+        assignFearAndGreedIndexValues();
+    }
+
+    /**
+     * Populate the BarDataSeries with BarDataPoints created from each of the bars in barSeries. Each BarDataPoint is
+     * assigned an RSI and MACD value based on the indicator values calculated for barSeries.
+     * @param barSeries the BarSeries that this BarDataSeries is based on.
+     */
+    private void mapBarsToBarDataPoints(BarSeries barSeries) {
+
         for (int i = 0; i < barSeries.getBarCount(); i++) {
             BarDataPoint bdp = new BarDataPoint(barSeries.getBar(i), this); // TODO: watch out for strong reference cycles
             bdp.rsi = rsiIndicator.getValue(i).doubleValue();
             bdp.macd = macdIndicator.getValue(i).doubleValue();
             barDataArray.add(bdp);
         }
+    }
 
-        labelBarActions();
+    /**
+     * If the timeGranularity is of value DAY, then fear and greed index values are assigned to each BarDataPoint in
+     * the series.
+     */
+    private void assignFearAndGreedIndexValues() {
+        // Fear and greed data is only really relevant for higher time-frames
         if (timeGranularity == CBTimeGranularity.DAY) {
             int fngDataPointCount = 830;
             Map<Long, Integer> fngDataPoints = FNGPublicData.getFNGIndexDataPoints(fngDataPointCount);
@@ -64,17 +82,26 @@ public class BarDataSeries {
                     break;
                 }
                 barDataArray.get(bdpI).fngIndex = fngDataPointValues[i];
-                if (i >= fngDataPointCount - barSeries.getBarCount() - 1) {
+                if (i >= fngDataPointCount - barDataArray.size() - 1) {
                     bdpI++;
                 }
             }
         }
     }
 
+    /**
+     * Get the number of bars in the series.
+     * @return number of bars in series.
+     */
     public int getBarCount() {
         return barDataArray.size();
     }
 
+    /**
+     * Get the bar data point with index i in the series.
+     * @param i index to find data point.
+     * @return bar data point i
+     */
     public BarDataPoint getBarDataPoint(int i) {
         return barDataArray.get(i);
     }
@@ -109,6 +136,12 @@ public class BarDataSeries {
 //        return highestHigh;
 //    }
 
+    /**
+     * Label training data based on the BarDataPoints associated with the series. This algorithm assigns some
+     * BarDataPoints in barDataArray a BUY or SELL BarAction. The minimum percent difference between a buy and sell
+     * action is as defined as for the buySellMinVolatility of the timeGranularity defined in Config. There should be
+     * no successive buy signals and no successive sell signals.
+     */
     private void labelBarActions() {
         double volatilityThreshold = Config.shared.timeGranularity.buySellMinVolatility();
         ArrayList<BarDataPoint> bdpsInLocalPeriod = new ArrayList<>();
@@ -187,15 +220,20 @@ public class BarDataSeries {
 //        }
     }
 
+    /**
+     * Get all the BarDataPoints which have a BarAction = barAction.
+     * @param barAction the BarAction to find BarDataPoints for.
+     * @return a list of BarDataPoints with barAction as their BarAction.
+     */
     public ArrayList<BarDataPoint> getDataPointsForBarAction(BarAction barAction) {
         ArrayList<BarDataPoint> actionPoints = new ArrayList<>(barDataArray);
         actionPoints.removeIf(bdp -> !(bdp.barAction == barAction));
         return actionPoints;
     }
 
-    /*
-    The percent return that would be generated over this bar series if every bar action were taken
-    Precondition: Bar actions have been assigned to this bar series
+    /** The percent return that would be generated over this bar series if every BarAction were executed.
+     * Precondition: BarActions have been assigned to this bar series.
+     * @return The expected return of this bar series.
      */
     public double expectedPercentReturn() {
         return 0.0; // TODO
