@@ -12,7 +12,12 @@ import java.util.Map;
 
 public class NeuraTrade {
 
+    /**
+     * Creates a new UIMain instance for the app.
+     * @param args Unused
+     */
     public static void main(String args[]) {
+        // All temporary, removed in production code
         BarSeries barSeries = CBPublicData.getRecentBarSeries(Config.shared.product, Config.shared.chartBarCount.value, Config.shared.timeGranularity);
         BarDataSeries barDataSeries = new BarDataSeries(Config.shared.product, barSeries, Config.shared.timeGranularity);
         for (int i = 0; i < barSeries.getBarCount(); i++) {
@@ -27,6 +32,7 @@ public class NeuraTrade {
         for (Map.Entry<Long, Integer> fngDataPoint : fngDataPoints.entrySet()) {
             System.out.println("EPOCH: " + new Date(fngDataPoint.getKey() * 1000) + ", FNG Index: " + fngDataPoint.getValue());
         }
+        // End of temporary point
 
         new UIMain();
     }
