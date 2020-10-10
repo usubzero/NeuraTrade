@@ -4,10 +4,9 @@ import io.ethanfine.neuratrade.Config;
 import io.ethanfine.neuratrade.coinbase.models.CBProduct;
 import io.ethanfine.neuratrade.coinbase.CBPublicData;
 import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
-import io.ethanfine.neuratrade.data.models.BarAction;
-import io.ethanfine.neuratrade.data.models.BarDataPoint;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
 import io.ethanfine.neuratrade.ui.models.ChartBarCount;
+import io.ethanfine.neuratrade.util.DataSetUtil;
 import io.ethanfine.neuratrade.util.Util;
 import org.jfree.chart.ChartMouseEvent;
 import org.jfree.chart.ChartMouseListener;
@@ -31,8 +30,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
-import java.sql.Date;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 public class UIMain implements ActionListener {
@@ -163,9 +160,9 @@ public class UIMain implements ActionListener {
      * @param barDataSeries The BarDataSeries to base the data off to create the chart.
      */
     private void initiateChart(BarDataSeries barDataSeries) {
-        AbstractXYDataset priceDataset = createPriceDataSet(barDataSeries);
-        XYDataset labelsDataset = createTrainingChartDataset(barDataSeries);
-        XYDataset fngDataset = createFNGDataset(barDataSeries);
+        AbstractXYDataset priceDataset = DataSetUtil.createPriceDataSet(barDataSeries);
+        XYDataset labelsDataset = DataSetUtil.createTrainingChartDataset(barDataSeries);
+        XYDataset fngDataset = DataSetUtil.createFNGDataset(barDataSeries);
         JFreeChart chart = createChart(barDataSeries, priceDataset, labelsDataset,  fngDataset, Config.shared.timeGranularity);
 
         chartPanel = new ChartPanel(chart);
@@ -187,75 +184,6 @@ public class UIMain implements ActionListener {
         });
 
         frame.getContentPane().add(chartPanel, BorderLayout.CENTER);
-    }
-
-    /**
-     * Create an XY-Dataset for price data. This dataset contains time on the X axis and
-     * (open, high, low, close, and volume) on the Y axis for every bar in barDataSeries.
-     * @param barDataSeries the BarDataSeries to base the dataset on.
-     * @return The XY-Dataset as an AbstractXYDataset.
-     */
-    private AbstractXYDataset createPriceDataSet(BarDataSeries barDataSeries) {
-        OHLCDataItem[] data  = new OHLCDataItem[barDataSeries.getBarCount()];
-        for (int i = 0; i < barDataSeries.getBarCount(); i++) {
-            BarDataPoint bdpI = barDataSeries.getBarDataPoint(i);
-            data[i] = new OHLCDataItem(Date.from(bdpI.bar.getBeginTime().toInstant()),
-                    bdpI.bar.getOpenPrice().doubleValue(),
-                    bdpI.bar.getHighPrice().doubleValue(),
-                    bdpI.bar.getLowPrice().doubleValue(),
-                    bdpI.bar.getClosePrice().doubleValue(),
-                    bdpI.bar.getVolume().doubleValue()
-            );
-        }
-
-        return new DefaultOHLCDataset(Config.shared.product + " Prices", data);
-    }
-
-    /**
-     * Create an XY-Dataset with a buy series and a sell series. The buy series is based on the BarDataPoints where
-     * barDataSeries would buy the product corresponding to barDataSeries. The sell series is the same as the buy series
-     * but for the sell BarAction.  The points in the buy and sell series contain time on the X axis and a price to
-     * buy or sell at on the Y axis.
-     * @param barDataSeries the BarDataSeries to base the dataset on.
-     * @return The XY-Dataset containing a buy series and a sell series as an XYDataSet.
-     */
-    private XYDataset createTrainingChartDataset(BarDataSeries barDataSeries) {
-        XYSeries buySeries = new XYSeries(barDataSeries.product.productName + " Buys");
-        XYSeries sellSeries = new XYSeries(barDataSeries.product.productName + " Sells");
-        ArrayList<BarDataPoint> buyBars = barDataSeries.getDataPointsForBarAction(BarAction.BUY);
-        ArrayList<BarDataPoint> sellBars = barDataSeries.getDataPointsForBarAction(BarAction.SELL);
-        for (int i = 0; i < barDataSeries.getBarCount(); i++) {
-            BarDataPoint bdpI = barDataSeries.getBarDataPoint(i);
-            if (buyBars.contains(bdpI)) {
-                buySeries.add(bdpI.bar.getBeginTime().toEpochSecond() * 1000, bdpI.bar.getLowPrice().doubleValue());
-            }
-            if (sellBars.contains(bdpI)) {
-                sellSeries.add(bdpI.bar.getBeginTime().toEpochSecond() * 1000, bdpI.bar.getHighPrice().doubleValue());
-            }
-        }
-
-        XYSeriesCollection dataset = new XYSeriesCollection();
-        dataset.addSeries(buySeries);
-        dataset.addSeries(sellSeries);
-        return dataset;
-    }
-
-    /**
-     * Create an XY-Dataset with a fear and greed series. The fear and greed series is composed of hte fear and greed
-     * index value for every bar in barDataSeries. The points in the fear and greed series contain time on the X axis
-     * and the fear and greed index values on the Y axis.
-     * @param barDataSeries the BarDataSeries to base the dataset on.
-     * @return The XY-Dataset containing a fear and greed index series as an XYDataSet.
-     */
-    private XYDataset createFNGDataset(BarDataSeries barDataSeries) {
-        XYSeries fngPoints = new XYSeries(barDataSeries.product.productName + " FNG Index");
-        for (int i = 0; i < barDataSeries.getBarCount(); i++) {
-            BarDataPoint bdpI = barDataSeries.getBarDataPoint(i);
-            fngPoints.add(bdpI.bar.getBeginTime().toEpochSecond() * 1000, bdpI.fngIndex);
-        }
-        XYSeriesCollection dataset = new XYSeriesCollection();
-        dataset.addSeries(fngPoints);
-        return dataset;
     }
 
     /**

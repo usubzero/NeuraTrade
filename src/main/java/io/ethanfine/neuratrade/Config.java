@@ -17,7 +17,8 @@ public class Config {
     public int rsiCalculationTickCount = 14;
 
     /**
-     * Training data generation parameters
+     * Training data generation parameters.
+     * BuySellMinVolatilities should be interpreted as percentages.
      */
     public double minsTimeGranularityBuySellMinVolatility = 1;
     public double minsFiveTimeGranularityBuySellMinVolatility = 1;

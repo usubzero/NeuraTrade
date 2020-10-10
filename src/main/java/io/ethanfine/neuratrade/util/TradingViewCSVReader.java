@@ -1,5 +1,7 @@
 package io.ethanfine.neuratrade.util;
 
+import io.ethanfine.neuratrade.coinbase.models.CBProduct;
+import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
 
 import java.io.BufferedReader;
@@ -23,6 +25,12 @@ public class TradingViewCSVReader {
                 String[] rawDataPoint = line.split(",");
 
             }
+
+
+            // BarSeries b
+            // BarDataSeries bds = new BarDataSeries(
+            BarDataSeries bds = new BarDataSeries(CBProduct.BTCUSD, null, CBTimeGranularity.HOUR);
+
         } catch (Exception e) {
             System.out.println("Failed to read CSV file at path: " + filePath);
         }
