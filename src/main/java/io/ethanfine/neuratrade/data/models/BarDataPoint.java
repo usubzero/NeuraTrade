@@ -14,7 +14,7 @@ public class BarDataPoint {
     private BarDataSeries barDataSeries;
 
     /**
-     * Indicator values for thie data point.
+     * Indicator values for this data point.
      */
     public double rsi;
     public double macd;

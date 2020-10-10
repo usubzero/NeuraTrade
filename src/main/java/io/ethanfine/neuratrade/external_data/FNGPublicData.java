@@ -14,7 +14,7 @@ public class FNGPublicData {
 
     /**
      * Returns a map with epoch times in seconds as keys and fear and greed index values as values. This data
-     * is obtainend by consulting the Fear and Greed API
+     * is obtained by consulting the Fear and Greed API
      * @param valueCount  The number of data points to retrieve
      * @return Map<Long, Integer> populated with epoch times mapped to fear and greed indices
      */
