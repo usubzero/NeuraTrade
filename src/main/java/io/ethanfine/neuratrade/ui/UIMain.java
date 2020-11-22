@@ -1,25 +1,17 @@
 package io.ethanfine.neuratrade.ui;
 
 import io.ethanfine.neuratrade.Config;
-import io.ethanfine.neuratrade.coinbase.models.CBProduct;
 import io.ethanfine.neuratrade.coinbase.CBPublicData;
-import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
-import io.ethanfine.neuratrade.ui.models.ChartBarCount;
-import io.ethanfine.neuratrade.util.DataSetUtil;
+import io.ethanfine.neuratrade.ui.generators.InputsChartGenerator;
+import io.ethanfine.neuratrade.ui.generators.MenuBarGenerator;
+import io.ethanfine.neuratrade.ui.generators.ParametersPanelManager;
 import io.ethanfine.neuratrade.util.Util;
 import org.jfree.chart.ChartMouseEvent;
 import org.jfree.chart.ChartMouseListener;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.DateAxis;
-import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.entity.ChartEntity;
-import org.jfree.chart.plot.CombinedDomainXYPlot;
-import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.renderer.xy.CandlestickRenderer;
-import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
-import org.jfree.data.xy.*;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.indicators.RSIIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
@@ -27,21 +19,15 @@ import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 import javax.swing.*;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.geom.Ellipse2D;
-import java.util.Arrays;
 
-public class UIMain implements ActionListener {
+public class UIMain {
 
-    JFrame frame;
+    public JFrame frame;
     ChartPanel chartPanel;
     JLabel priceLabel;
     JLabel rsiLabel;
-    JPanel parametersPanel;
-    JComboBox productSelector;
-    JComboBox barCountSelector;
-    JComboBox granularitySelector;
+    ParametersPanelManager parametersPanelManager;
+    InputsChartGenerator inputsChartGenerator;
 
     /**
      * Instantiates a JFrame for the app, loads the frames content, and makes this frame visible.
@@ -61,37 +47,42 @@ public class UIMain implements ActionListener {
      * most recent bar series and begins the UI refresh cycle.
      */
     private void loadFrameContent() {
+        frame.setJMenuBar(new MenuBarGenerator(this).generateMenuBar());
         loadTickerPriceLabel();
         loadRSILabel();
-        loadParametersPanel();
+        parametersPanelManager = new ParametersPanelManager(this);
 
-        BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(
-                Config.shared.product,
-                Config.shared.chartBarCount.value,
-                Config.shared.timeGranularity
-        );
-        BarDataSeries recentBarDataSeries = new BarDataSeries(
-                Config.shared.product,
-                recentBarSeries,
-                Config.shared.timeGranularity
-        );
-        initiateChart(recentBarDataSeries);
+        BarSeries recentBarSeries = State.getRecentBarSeries();
+        if (recentBarSeries != null && !recentBarSeries.isEmpty()) {
+            BarDataSeries bds = new BarDataSeries(
+                    Config.shared.product,
+                    recentBarSeries,
+                    Config.shared.timeGranularity
+            );
+            // TODO: abstract away BarDataSeries constructor with config values
+            initiateInputChartsPanel(bds);
+        }
 
         beginRefreshCycle();
     }
 
     /**
-     * Retrieves the ticker price for the product selected in Config, creates a JLabel with the price as
-     * such label's title, and adds the label to the frame.
+     * Retrieves the ticker price for the product selected in Config and creates a user-friendly String representation
+     * of it.
+     * @return User-friendly String representation of ticker price.
+     */
+    private String tickerPriceLabelTitle() {
+        Double tickerPrice = CBPublicData.getTickerPrice(Config.shared.product);
+        return tickerPrice == null ?
+                "PRICE RETRIEVAL ERROR" :
+                "Live Market Price: $" + Util.formatDouble(tickerPrice, 2);
+    }
+
+    /**
+     * Creates a JLabel with a ticker price as such label's title, and adds the label to the frame.
      */
     private void loadTickerPriceLabel() {
-        Double tickerPrice = CBPublicData.getTickerPrice(Config.shared.product);
-
-        String labelTitle = tickerPrice == null ?
-                "PRICE RETRIEVAL ERROR" :
-                "$" + Util.formatDouble(tickerPrice, 2);
-
-        priceLabel = new JLabel(labelTitle, JLabel.CENTER);
+        priceLabel = new JLabel(tickerPriceLabelTitle(), JLabel.CENTER);
         priceLabel.setVerticalTextPosition(JLabel.BOTTOM);
         priceLabel.setHorizontalTextPosition(JLabel.CENTER);
 
@@ -103,11 +94,7 @@ public class UIMain implements ActionListener {
      * calculated from such bar series as such label's title, and adds the label to the frame.
      */
     private void loadRSILabel() {
-        BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(
-                Config.shared.product,
-                Config.shared.chartBarCount.value,
-                Config.shared.timeGranularity
-        );
+        BarSeries recentBarSeries = State.getRecentBarSeries();
 
         String labelTitle = "RSI RETRIEVAL ERROR";
         if (recentBarSeries != null && !recentBarSeries.isEmpty()) {
@@ -124,48 +111,21 @@ public class UIMain implements ActionListener {
         frame.add(rsiLabel, BorderLayout.EAST);
     }
 
-    /**
-     * Instantiates a JPanel that allows for interactions with the Config parameters of product, bar count, and
-     * time granularity. Adds such panel to the frame and all parameter JComboBox selectors to the panel.
-     */
-    private void loadParametersPanel() {
-        parametersPanel = new JPanel();
-        parametersPanel.setPreferredSize(new Dimension(400, 40));
-        frame.getContentPane().add(parametersPanel, BorderLayout.SOUTH);
-        productSelector = loadParametersPanelSelector(CBProduct.values(), Config.shared.product);
-        parametersPanel.add(productSelector, BorderLayout.WEST);
-        barCountSelector = loadParametersPanelSelector(ChartBarCount.values(), Config.shared.chartBarCount);
-        parametersPanel.add(barCountSelector, BorderLayout.CENTER);
-        granularitySelector = loadParametersPanelSelector(CBTimeGranularity.values(), Config.shared.timeGranularity);
-        parametersPanel.add(granularitySelector, BorderLayout.EAST);
-    }
-
-    /**
-     * Instantiates a JComboBox with values as the options available and selectedVal as the default selected option.
-     * Precondition: selectedVal is in values
-     * @param values the options available on the JComboBox
-     * @param selectedVal the default option selected on the JComboBox
-     */
-    private JComboBox loadParametersPanelSelector(Object[] values, Object selectedVal) {
-        JComboBox selector = new JComboBox(values);
-        selector.setSelectedIndex(Arrays.asList(values).indexOf(selectedVal));
-        selector.addActionListener(this);
-        return selector;
-    }
-
     // TODO: move several methods below into model class
     /**
      * Initiate a ChartPanel based off a chart created that contains a price data set, a training data labels data set,
      * and potentially a fear and greed data set. This ChartPanel is configured and the chart is added to the frame.
+     * TODO: update doc
      * @param barDataSeries The BarDataSeries to base the data off to create the chart.
      */
-    private void initiateChart(BarDataSeries barDataSeries) {
-        AbstractXYDataset priceDataset = DataSetUtil.createPriceDataSet(barDataSeries);
-        XYDataset labelsDataset = DataSetUtil.createTrainingChartDataset(barDataSeries);
-        XYDataset fngDataset = DataSetUtil.createFNGDataset(barDataSeries);
-        JFreeChart chart = createChart(barDataSeries, priceDataset, labelsDataset,  fngDataset, Config.shared.timeGranularity);
-
-        chartPanel = new ChartPanel(chart);
+    private void initiateInputChartsPanel(BarDataSeries barDataSeries) {
+//        AbstractXYDataset priceDataset = DataSetUtil.createPriceDataSet(barDataSeries);
+//        XYDataset labelsDataset = DataSetUtil.createTrainingChartDataset(barDataSeries);
+//        XYDataset fngDataset = DataSetUtil.createFNGDataset(barDataSeries);
+//        JFreeChart chart = createChart(barDataSeries, priceDataset, labelsDataset,  fngDataset, Config.shared.timeGranularity);
+        inputsChartGenerator = new InputsChartGenerator(barDataSeries);
+        JFreeChart inputsChart = inputsChartGenerator.generateChart();
+        chartPanel = new ChartPanel(inputsChart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         chartPanel.setBackground(Color.WHITE);
         chartPanel.setHorizontalAxisTrace(true);
@@ -187,108 +147,36 @@ public class UIMain implements ActionListener {
     }
 
     /**
-     * Create a JFreeChart that displays priceDataSet, labelsDataSet, and potentially fngDataset. priceDataSet is
-     * displayed as candlestick bars, labelsSet is displayed with blue circles on the buy prices and pink circles on the
-     * sell prices, and fngDataset is displayed only if the timeGranularity is the DAY CBTimeGranularity and is
-     * displayed as a subplot plotting time on the X axis vs fear and greed index values on the Y axis. The main plot
-     * displays time on the X axis and the range of prices in barDataSeries on the Y axis.
-     * @param barDataSeries the BarDataSeries to construct the chart based on.
-     * @param priceDataset the priceDataset to construct the chart based on and to include in the main plot.
-     * @param labelsDataset the labelsDataset to include in the main plot.
-     * @param fngDataset the fngDataset to potentially construct a subplot to be included in the chart.
-     * @param timeGranularity the timeGranularity of each bar.
-     * @return the JFreeChart created with the main plot and potentially a subplot.
-     */
-    private JFreeChart createChart(BarDataSeries barDataSeries,
-                                   AbstractXYDataset priceDataset,
-                                   XYDataset labelsDataset,
-                                   XYDataset fngDataset,
-                                   CBTimeGranularity timeGranularity) {
-        DateAxis domainAxis = new DateAxis("Date");
-
-        NumberAxis priceRangeAxis = new NumberAxis("Price");
-        CandlestickRenderer priceRenderer = new CandlestickRenderer();
-
-        final XYPlot mainPlot = new XYPlot(priceDataset, domainAxis, priceRangeAxis, priceRenderer);
-        mainPlot.setDataset(1, labelsDataset);
-        XYLineAndShapeRenderer labelsRenderer = new XYLineAndShapeRenderer(false, true);
-        labelsRenderer.setSeriesPaint(0, Color.BLUE);
-        labelsRenderer.setSeriesPaint(1, Color.MAGENTA);
-        Ellipse2D ellipse = new Ellipse2D.Double(-3.0, -3.0, 6.0, 6.0);
-        labelsRenderer.setSeriesShape(0, ellipse);
-        labelsRenderer.setSeriesShape(1, ellipse);
-        mainPlot.setRenderer(1, labelsRenderer);
-
-//        final long ONE_DAY = 24 * 60 * 60 * 1000;
-//        XYLineAndShapeRenderer maRenderer = new XYLineAndShapeRenderer(true, false);
-//        XYDataset maDataset  = MovingAverage.createMovingAverage(priceDataset, "MA", 200 * ONE_DAY, 0);
-//        mainPlot.setRenderer(2, maRenderer);
-//        mainPlot.setDataset (2, maDataset);
-
-        priceRenderer.setSeriesPaint(0, Color.BLACK);
-        priceRenderer.setDrawVolume(true);
-        priceRangeAxis.setAutoRangeIncludesZero(false);
-
-        XYPlot fngPlot = null;
-        if (timeGranularity == CBTimeGranularity.DAY) {
-            XYLineAndShapeRenderer fngRenderer = new XYLineAndShapeRenderer();
-            NumberAxis fngRangeAxis = new NumberAxis("FNG Index");
-            fngPlot = new XYPlot(fngDataset, domainAxis, fngRangeAxis, fngRenderer);
-            fngRangeAxis.setAutoRangeIncludesZero(false);
-            fngRenderer.setSeriesShape(0, new Rectangle(1, 1));
-        }
-
-        final CombinedDomainXYPlot plot = new CombinedDomainXYPlot(domainAxis);
-        plot.setGap(10);
-        plot.add(mainPlot, 5);
-        if (timeGranularity == CBTimeGranularity.DAY) {
-            plot.add(fngPlot, 1);
-        }
-
-        final JFreeChart chart = new JFreeChart(
-                Config.shared.product.productName,
-                null, plot,
-                false
-        );
-        chart.setTitle(barDataSeries.product.productName + " Training Data");
-        return chart;
-    }
-
-    /**
      * Update the data displayed on all UI elements. Retrieve new data and display relevant data on the ticker price
      * label, on the RSI label, and refresh the chart panel by removing it and generating a new one.
      */
-    private void refreshUIDynamicElements() {
-        Double tickerPrice = CBPublicData.getTickerPrice(Config.shared.product);
-        String newLabelTitle = (tickerPrice == null) ?
-                "PRICE RETRIEVAL ERROR" :
-                "$" + Util.formatDouble(tickerPrice, 2);
-        priceLabel.setText(newLabelTitle);
+    public void refreshUIDynamicElements() {
+        if (State.displayBDSisImported()) {
+            // TODO: change to display file name of file from which data was imported
+            priceLabel.setVisible(false);
+            rsiLabel.setVisible(false);
+        } else {
+            priceLabel.setText(tickerPriceLabelTitle());
+            priceLabel.setVisible(true);
+            rsiLabel.setVisible(true);
+        }
 
-        BarSeries recentBarSeries = CBPublicData.getRecentBarSeries(
-                Config.shared.product,
-                Config.shared.chartBarCount.value,
-                Config.shared.timeGranularity
-        );
-
+//        Config.shared.timeGranularity = CBTimeGranularity.MINUTE;
+//        BarSeries recentBarSeries = getRecentBarSeries();
+        BarDataSeries bds = State.getDisplayBDS();
         String rsiLabelTitle = "RSI RETRIEVAL ERROR";
-        if (recentBarSeries != null && !recentBarSeries.isEmpty()) {
-            ClosePriceIndicator closePrice = new ClosePriceIndicator(recentBarSeries);
-            RSIIndicator rsiIndicator = new RSIIndicator(closePrice, Config.shared.rsiCalculationTickCount);
-            double rsi = rsiIndicator.getValue(Config.shared.chartBarCount.value - 1).doubleValue();
+        if (bds != null) {
+            double rsi = bds.getBarDataPoint(bds.getBarCount() - 1).rsi;
             rsiLabelTitle = "RSI: " + Util.formatDouble(rsi, 2);
-        }
-        rsiLabel.setText(rsiLabelTitle);
+            rsiLabel.setText(rsiLabelTitle);
 
-        if (chartPanel != null) {
-            frame.remove(chartPanel);
+            if (chartPanel != null) {
+                frame.remove(chartPanel);
+            }
+            initiateInputChartsPanel(bds);
         }
-        BarDataSeries recentBarDataSeries = new BarDataSeries(
-                Config.shared.product,
-                recentBarSeries,
-                Config.shared.timeGranularity
-        );
-        initiateChart(recentBarDataSeries);
+
+        parametersPanelManager.refreshParametersPanel();
     }
 
     /**
@@ -308,23 +196,6 @@ public class UIMain implements ActionListener {
                 }
             }
         }).start();
-    }
-
-    /**
-     * Detect actions on the chart panel.
-     * @param e the action that was performed onn the panel.
-     */
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        if (e.getSource() == productSelector) {
-            Config.shared.product = (CBProduct) productSelector.getSelectedItem();
-        } else if (e.getSource() == granularitySelector) {
-            Config.shared.timeGranularity = (CBTimeGranularity) granularitySelector.getSelectedItem();
-        } else if (e.getSource() == barCountSelector) {
-            Config.shared.chartBarCount = (ChartBarCount) barCountSelector.getSelectedItem();
-        }
-
-        refreshUIDynamicElements();
     }
 
 }

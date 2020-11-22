@@ -19,6 +19,10 @@ public class BarDataPoint {
     public double rsi;
     public double macd;
     public double fngIndex;
+    public double sma20;
+    public double sma50;
+    public double sma200;
+    public double epochDebugTODORM;
 
     /**
      * The action associated with this data point.

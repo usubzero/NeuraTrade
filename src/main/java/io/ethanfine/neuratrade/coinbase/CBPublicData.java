@@ -123,6 +123,8 @@ public class CBPublicData {
                     zonedDateTime = zonedDateTime.plusMinutes(15);
                 case HOUR:
                     zonedDateTime = zonedDateTime.plusHours(1);
+                case HOUR_FOUR:
+                    zonedDateTime = zonedDateTime.plusHours(4);
                 case HOUR_SIX:
                     zonedDateTime = zonedDateTime.plusHours(6);
                 case DAY:

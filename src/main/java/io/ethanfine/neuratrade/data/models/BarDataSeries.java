@@ -18,13 +18,16 @@ import java.util.Map;
 public class BarDataSeries {
 
     public CBProduct product;
-    CBTimeGranularity timeGranularity;
+    public CBTimeGranularity timeGranularity;
 
     private final ArrayList<BarDataPoint> barDataArray;
 
     // Indicators derived from the BarDataPoints in barDataArray
     public RSIIndicator rsiIndicator;
     public MACDIndicator macdIndicator;
+    public SMAIndicator sma20Indicator;
+    public SMAIndicator sma50Indicator;
+    public SMAIndicator sma200Indicator;
     public ClosePriceIndicator closePriceIndicator;
     public LowPriceIndicator lowestPriceIndicator;
     public HighPriceIndicator highPriceIndicator;
@@ -37,6 +40,9 @@ public class BarDataSeries {
         closePriceIndicator = new ClosePriceIndicator(barSeries);
         rsiIndicator = new RSIIndicator(closePriceIndicator, Config.shared.rsiCalculationTickCount);
         macdIndicator = new MACDIndicator(closePriceIndicator);
+        sma20Indicator = new SMAIndicator(closePriceIndicator, 20);
+        sma50Indicator = new SMAIndicator(closePriceIndicator, 50);
+        sma200Indicator = new SMAIndicator(closePriceIndicator, 200);
         lowestPriceIndicator = new LowPriceIndicator(barSeries);
         highPriceIndicator = new HighPriceIndicator(barSeries);
 
@@ -51,11 +57,13 @@ public class BarDataSeries {
      * @param barSeries the BarSeries that this BarDataSeries is based on.
      */
     private void mapBarsToBarDataPoints(BarSeries barSeries) {
-
         for (int i = 0; i < barSeries.getBarCount(); i++) {
             BarDataPoint bdp = new BarDataPoint(barSeries.getBar(i), this); // TODO: watch out for strong reference cycles
             bdp.rsi = rsiIndicator.getValue(i).doubleValue();
             bdp.macd = macdIndicator.getValue(i).doubleValue();
+            bdp.sma20 = sma20Indicator.getValue(i).doubleValue();
+            bdp.sma50 = sma50Indicator.getValue(i).doubleValue();
+            bdp.sma200 = sma200Indicator.getValue(i).doubleValue();
             barDataArray.add(bdp);
         }
     }
@@ -155,6 +163,7 @@ public class BarDataSeries {
                 BarDataPoint bdpY = getBarDataPoint(y);
                 bdpsInLocalPeriod.add(bdpY);
 
+                bdpY.barAction = BarAction.HOLD;
                 BarDataPoint localPeriodHighBDP = null;
                 BarDataPoint localPeriodLowBDP = null;
                 for (BarDataPoint localPeriodBDP : bdpsInLocalPeriod) {

@@ -52,6 +52,7 @@ public class NetworkingManager {
                     throw new NetworkRequestException(
                             "Erroneous response code " + responseCode + " for request with URL " + url.toString()
                     );
+                    // TODO: display as error on GUI instead
                 }
             } catch (Exception e) {
                 throw new NetworkRequestException(
