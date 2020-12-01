@@ -5,12 +5,18 @@ import io.ethanfine.neuratrade.coinbase.models.CBProduct;
 import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.external_data.FNGPublicData;
 import org.ta4j.core.BarSeries;
+import org.ta4j.core.Indicator;
 import org.ta4j.core.indicators.MACDIndicator;
 import org.ta4j.core.indicators.RSIIndicator;
 import org.ta4j.core.indicators.SMAIndicator;
+import org.ta4j.core.indicators.bollinger.BollingerBandWidthIndicator;
+import org.ta4j.core.indicators.bollinger.BollingerBandsLowerIndicator;
+import org.ta4j.core.indicators.bollinger.BollingerBandsMiddleIndicator;
+import org.ta4j.core.indicators.bollinger.BollingerBandsUpperIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 import org.ta4j.core.indicators.helpers.HighPriceIndicator;
 import org.ta4j.core.indicators.helpers.LowPriceIndicator;
+import org.ta4j.core.num.Num;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -18,13 +24,20 @@ import java.util.Map;
 public class BarDataSeries {
 
     public CBProduct product;
-    CBTimeGranularity timeGranularity;
+    public CBTimeGranularity timeGranularity;
 
     private final ArrayList<BarDataPoint> barDataArray;
 
     // Indicators derived from the BarDataPoints in barDataArray
     public RSIIndicator rsiIndicator;
     public MACDIndicator macdIndicator;
+    public BollingerBandsMiddleIndicator basisOfBBIndicator;
+    public BollingerBandsUpperIndicator upperOfBBIndicator;
+    public BollingerBandsLowerIndicator lowerOfBBIndicator;
+    public BollingerBandWidthIndicator widthOfBBIndicator;
+    public SMAIndicator sma20Indicator;
+    public SMAIndicator sma50Indicator;
+    public SMAIndicator sma200Indicator;
     public ClosePriceIndicator closePriceIndicator;
     public LowPriceIndicator lowestPriceIndicator;
     public HighPriceIndicator highPriceIndicator;
@@ -37,6 +50,10 @@ public class BarDataSeries {
         closePriceIndicator = new ClosePriceIndicator(barSeries);
         rsiIndicator = new RSIIndicator(closePriceIndicator, Config.shared.rsiCalculationTickCount);
         macdIndicator = new MACDIndicator(closePriceIndicator);
+        // TODO: BB indicators for live data CSV exporting
+        sma20Indicator = new SMAIndicator(closePriceIndicator, 20);
+        sma50Indicator = new SMAIndicator(closePriceIndicator, 50);
+        sma200Indicator = new SMAIndicator(closePriceIndicator, 200);
         lowestPriceIndicator = new LowPriceIndicator(barSeries);
         highPriceIndicator = new HighPriceIndicator(barSeries);
 
@@ -51,11 +68,13 @@ public class BarDataSeries {
      * @param barSeries the BarSeries that this BarDataSeries is based on.
      */
     private void mapBarsToBarDataPoints(BarSeries barSeries) {
-
         for (int i = 0; i < barSeries.getBarCount(); i++) {
             BarDataPoint bdp = new BarDataPoint(barSeries.getBar(i), this); // TODO: watch out for strong reference cycles
             bdp.rsi = rsiIndicator.getValue(i).doubleValue();
             bdp.macd = macdIndicator.getValue(i).doubleValue();
+            bdp.sma20 = sma20Indicator.getValue(i).doubleValue();
+            bdp.sma50 = sma50Indicator.getValue(i).doubleValue();
+            bdp.sma200 = sma200Indicator.getValue(i).doubleValue();
             barDataArray.add(bdp);
         }
     }
@@ -155,6 +174,7 @@ public class BarDataSeries {
                 BarDataPoint bdpY = getBarDataPoint(y);
                 bdpsInLocalPeriod.add(bdpY);
 
+                bdpY.barActionLabeled = BarAction.HOLD;
                 BarDataPoint localPeriodHighBDP = null;
                 BarDataPoint localPeriodLowBDP = null;
                 for (BarDataPoint localPeriodBDP : bdpsInLocalPeriod) {
@@ -177,8 +197,8 @@ public class BarDataSeries {
                                 bdpY.bar.isBearish() && getBarDataPoint(y + 1).bar.isBearish())) continue; // if continuing trend short term, expand local period
 
                 if (localPeriodVolatility >= volatilityThreshold) {
-                    localPeriodHighBDP.barAction = BarAction.SELL;
-                    localPeriodLowBDP.barAction = BarAction.BUY;
+                    localPeriodHighBDP.barActionLabeled = BarAction.SELL;
+                    localPeriodLowBDP.barActionLabeled = BarAction.BUY;
                     bdpsInLocalPeriod.clear();
                     nextPeriodI = y + 1;
                 }
@@ -191,17 +211,17 @@ public class BarDataSeries {
             for (int i = 1; i < getBarCount(); i++) {
                 BarDataPoint bdpBefore = getBarDataPoint(i - 1);
                 BarDataPoint bdp = getBarDataPoint(i);
-                if (bdp.barAction == BarAction.HOLD) continue;
-                if (bdpBefore.barAction == bdp.barAction || (lastRepeated != null && repeating && lastRepeated == bdp.barAction)) {
+                if (bdp.barActionLabeled == BarAction.HOLD) continue;
+                if (bdpBefore.barActionLabeled == bdp.barActionLabeled || (lastRepeated != null && repeating && lastRepeated == bdp.barActionLabeled)) {
                     repeating = true;
-                    lastRepeated = bdp.barAction;
-                    if (bdp.barAction == BarAction.BUY) {
-                        bdp.barAction = BarAction.HOLD;
-                    } else if (bdp.barAction == BarAction.SELL) {
-                        bdp.barAction = BarAction.HOLD;
+                    lastRepeated = bdp.barActionLabeled;
+                    if (bdp.barActionLabeled == BarAction.BUY) {
+                        bdp.barActionLabeled = BarAction.HOLD;
+                    } else if (bdp.barActionLabeled == BarAction.SELL) {
+                        bdp.barActionLabeled = BarAction.HOLD;
                     }
                 }
-                if (bdpBefore.barAction != bdp.barAction && (lastRepeated != null && repeating && lastRepeated != bdp.barAction)) {
+                if (bdpBefore.barActionLabeled != bdp.barActionLabeled && (lastRepeated != null && repeating && lastRepeated != bdp.barActionLabeled)) {
                     repeating = false;
                 }
             }
@@ -210,11 +230,11 @@ public class BarDataSeries {
 //            for (int i = 1; i < getBarCount(); i++) {
 //                BarDataPoint bdpBefore = getBarDataPoint(i - 1);
 //                BarDataPoint bdp = getBarDataPoint(i);
-//                if (bdpBefore.barAction == bdp.barAction) {
-//                    if (bdp.barAction == BarAction.BUY) {
-//                        bdp.barAction = BarAction.HOLD;
-//                    } else if (bdp.barAction == BarAction.SELL) {
-//                        bdp.barAction = BarAction.HOLD;
+//                if (bdpBefore.barActionLabeled == bdp.barAction) {
+//                    if (bdp.barActionLabeled == BarAction.BUY) {
+//                        bdp.barActionLabeled = BarAction.HOLD;
+//                    } else if (bdp.barActionLabeled == BarAction.SELL) {
+//                        bdp.barActionLabeled = BarAction.HOLD;
 //                    }
 //                }
 //            }
@@ -222,13 +242,13 @@ public class BarDataSeries {
     }
 
     /**
-     * Get all the BarDataPoints which have a BarAction = barAction.
-     * @param barAction the BarAction to find BarDataPoints for.
-     * @return a list of BarDataPoints with barAction as their BarAction.
+     * Get all the BarDataPoints which match a certain filter.
+     * @param filter The predicate that evaluates each bar data point when choosing to keep or remove it when filtering.
+     * @return a list of BarDataPoints matching the predicate filter.
      */
-    public ArrayList<BarDataPoint> getDataPointsForBarAction(BarAction barAction) {
+    public ArrayList<BarDataPoint> filterDataPoints(java.util.function.Predicate<? super BarDataPoint> filter) {
         ArrayList<BarDataPoint> actionPoints = new ArrayList<>(barDataArray);
-        actionPoints.removeIf(bdp -> !(bdp.barAction == barAction));
+        actionPoints.removeIf(filter);
         return actionPoints;
     }
 

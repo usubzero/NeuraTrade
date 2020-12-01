@@ -2,6 +2,8 @@ package io.ethanfine.neuratrade.coinbase.models;
 
 import io.ethanfine.neuratrade.Config;
 
+import java.util.HashMap;
+
 public enum CBTimeGranularity {
 
     /**
@@ -11,10 +13,22 @@ public enum CBTimeGranularity {
     MINUTE_FIVE(300),
     MINUTE_FIFTEEN(900),
     HOUR(3600),
+    HOUR_FOUR(14400),
     HOUR_SIX(21600),
     DAY(86400);
 
     public final int seconds;
+
+    private static final HashMap<Integer, CBTimeGranularity> timeGranularityMap = new HashMap<>();
+
+    /*
+    Populates time granularity map on static instance initialization
+     */
+    static {
+        for (CBTimeGranularity tg : values()) {
+            timeGranularityMap.put(tg.seconds, tg);
+        }
+    }
 
     CBTimeGranularity(int seconds) {
         this.seconds = seconds;
@@ -33,6 +47,8 @@ public enum CBTimeGranularity {
                 return Config.shared.minsFifteenTimeGranularityBuySellMinVolatility;
             case HOUR:
                 return Config.shared.hourTimeGranularityBuySellMinVolatility;
+            case HOUR_FOUR:
+                return Config.shared.hourFourTimeGranularityBuySellMinVolatility;
             case HOUR_SIX:
                 return Config.shared.hourSixTimeGranularityBuySellMinVolatility;
             case DAY:
@@ -40,6 +56,15 @@ public enum CBTimeGranularity {
             default:
                 return Config.shared.minsTimeGranularityBuySellMinVolatility;
         }
+    }
+
+    /**
+     * TODO: doc
+     * @param timeGranularitySeconds
+     * @return
+     */
+    public static CBTimeGranularity from(int timeGranularitySeconds) {
+        return timeGranularityMap.get(timeGranularitySeconds);
     }
 
 }

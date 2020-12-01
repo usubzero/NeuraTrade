@@ -1,9 +1,14 @@
 package io.ethanfine.neuratrade.util;
 
+import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
+
 import java.math.RoundingMode;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;

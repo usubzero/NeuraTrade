@@ -18,12 +18,24 @@ public class BarDataPoint {
      */
     public double rsi;
     public double macd;
+    public double basisOfBB;
+    public double upperOfBB;
+    public double lowerOfBB;
+    public double widthOfBB;
+    public double sma20;
+    public double sma50;
+    public double sma200;
     public double fngIndex;
+    public double epochDebugTODORM;
 
     /**
-     * The action associated with this data point.
+     * The labeled action associated with this data point.
      */
-    public BarAction barAction;
+    public BarAction barActionLabeled;
+    /**
+     * The predicted action associated with this data point.
+     */
+    public BarAction barActionPredicted;
 
     public BarDataPoint(Bar bar, BarDataSeries barDataSeries) {
         this.bar = bar;
