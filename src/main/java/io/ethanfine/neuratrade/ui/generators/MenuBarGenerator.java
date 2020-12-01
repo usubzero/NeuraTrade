@@ -86,6 +86,7 @@ public class MenuBarGenerator implements ActionListener {
                 BarDataSeries bdsFromCSV = CSVIO.readFile(selectedFiles[i].getAbsolutePath());
                 String filePathNoExt = FilenameUtils.removeExtension(filePath);
                 String writeFilePath = filePathNoExt + ",TDATA.csv";
+                System.out.println(bdsFromCSV);
                 CSVIO.writeBarDataSeriesToFile(bdsFromCSV, writeFilePath);
             }
             String successMessage = "Batch labeled " + selectedFiles.length + " data files. Each labeled file is now stored at <original file name>,TDATA.csv";

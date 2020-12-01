@@ -1,7 +1,5 @@
 package io.ethanfine.neuratrade.data.models;
 
-import io.ethanfine.neuratrade.coinbase.models.CBProduct;
-
 import java.util.HashMap;
 
 public enum BarAction {

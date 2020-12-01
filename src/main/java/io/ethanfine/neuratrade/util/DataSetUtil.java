@@ -41,24 +41,32 @@ public class DataSetUtil {
      * @param barDataSeries the BarDataSeries to base the dataset on.
      * @return The XY-Dataset containing a buy series and a sell series as an XYDataSet.
      */
-    public static XYDataset createTrainingChartDataset(BarDataSeries barDataSeries) {
-        XYSeries buySeries = new XYSeries(barDataSeries.product.productName + " Buys");
-        XYSeries sellSeries = new XYSeries(barDataSeries.product.productName + " Sells");
-        ArrayList<BarDataPoint> buyBars = barDataSeries.getDataPointsForBarAction(BarAction.BUY);
-        ArrayList<BarDataPoint> sellBars = barDataSeries.getDataPointsForBarAction(BarAction.SELL);
+    public static XYDataset createBarActionDataset(BarDataSeries barDataSeries) {
+        XYSeries lBuySeries = new XYSeries(barDataSeries.product.productName + " Labeled Buys");
+        XYSeries lSellSeries = new XYSeries(barDataSeries.product.productName + " Labeled Sells");
+        XYSeries pBuySeries = new XYSeries(barDataSeries.product.productName + " Predicted Buys");
+        XYSeries pSellSeries = new XYSeries(barDataSeries.product.productName + " Predicted Sells");
+        ArrayList<BarDataPoint> lBuyBars = barDataSeries.filterDataPoints(bdp -> !(bdp.barActionLabeled == BarAction.BUY));
+        ArrayList<BarDataPoint> lSellBars = barDataSeries.filterDataPoints(bdp -> !(bdp.barActionLabeled == BarAction.SELL));
+        ArrayList<BarDataPoint> pBuyBars = barDataSeries.filterDataPoints(bdp -> !(bdp.barActionPredicted == BarAction.BUY));
+        ArrayList<BarDataPoint> pSellBars = barDataSeries.filterDataPoints(bdp -> !(bdp.barActionPredicted == BarAction.SELL));
         for (int i = 0; i < barDataSeries.getBarCount(); i++) {
             BarDataPoint bdpI = barDataSeries.getBarDataPoint(i);
-            if (buyBars.contains(bdpI)) {
-                buySeries.add(bdpI.bar.getBeginTime().toEpochSecond() * 1000, bdpI.bar.getLowPrice().doubleValue());
-            }
-            if (sellBars.contains(bdpI)) {
-                sellSeries.add(bdpI.bar.getBeginTime().toEpochSecond() * 1000, bdpI.bar.getHighPrice().doubleValue());
-            }
+            if (lBuyBars.contains(bdpI))
+                lBuySeries.add(bdpI.bar.getBeginTime().toEpochSecond() * 1000, bdpI.bar.getLowPrice().doubleValue());
+            if (lSellBars.contains(bdpI))
+                lSellSeries.add(bdpI.bar.getBeginTime().toEpochSecond() * 1000, bdpI.bar.getHighPrice().doubleValue());
+            if (pBuyBars.contains(bdpI))
+                pBuySeries.add(bdpI.bar.getBeginTime().toEpochSecond() * 1000, bdpI.bar.getLowPrice().doubleValue());
+            if (pSellBars.contains(bdpI))
+                pSellSeries.add(bdpI.bar.getBeginTime().toEpochSecond() * 1000, bdpI.bar.getHighPrice().doubleValue());
         }
 
         XYSeriesCollection dataset = new XYSeriesCollection();
-        dataset.addSeries(buySeries);
-        dataset.addSeries(sellSeries);
+        dataset.addSeries(lBuySeries);
+        dataset.addSeries(lSellSeries);
+        dataset.addSeries(pBuySeries);
+        dataset.addSeries(pSellSeries);
         return dataset;
     }
 

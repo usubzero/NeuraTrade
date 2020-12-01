@@ -59,7 +59,6 @@ public class UIMain {
                     recentBarSeries,
                     Config.shared.timeGranularity
             );
-            // TODO: abstract away BarDataSeries constructor with config values
             initiateInputChartsPanel(bds);
         }
 

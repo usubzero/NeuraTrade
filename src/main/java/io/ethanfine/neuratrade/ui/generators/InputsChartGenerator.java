@@ -20,7 +20,6 @@ import java.awt.geom.Ellipse2D;
 public class InputsChartGenerator {
 
     public BarDataSeries barDataSeries;
-    public XYPlot mainPlot;
 
     public InputsChartGenerator(BarDataSeries barDataSeries) {
         this.barDataSeries = barDataSeries;
@@ -28,7 +27,7 @@ public class InputsChartGenerator {
 
     public JFreeChart generateChart() {
         AbstractXYDataset priceDataset = DataSetUtil.createPriceDataSet(barDataSeries);
-        XYDataset labelsDataset = DataSetUtil.createTrainingChartDataset(barDataSeries);
+        XYDataset labelsDataset = DataSetUtil.createBarActionDataset(barDataSeries);
         XYDataset fngDataset = DataSetUtil.createFNGDataset(barDataSeries);
         final CBTimeGranularity timeGranularity = barDataSeries.timeGranularity;
 
@@ -39,13 +38,18 @@ public class InputsChartGenerator {
 
         final XYPlot mainPlot = new XYPlot(priceDataset, domainAxis, priceRangeAxis, priceRenderer);
         mainPlot.setDataset(1, labelsDataset);
-        XYLineAndShapeRenderer labelsRenderer = new XYLineAndShapeRenderer(false, true);
-        labelsRenderer.setSeriesPaint(0, Color.BLUE);
-        labelsRenderer.setSeriesPaint(1, Color.MAGENTA);
-        Ellipse2D ellipse = new Ellipse2D.Double(-3.0, -3.0, 6.0, 6.0);
-        labelsRenderer.setSeriesShape(0, ellipse);
-        labelsRenderer.setSeriesShape(1, ellipse);
-        mainPlot.setRenderer(1, labelsRenderer);
+        XYLineAndShapeRenderer barActionsRenderer = new XYLineAndShapeRenderer(false, true);
+        barActionsRenderer.setSeriesPaint(0, Color.BLUE); // labeled buys
+        barActionsRenderer.setSeriesPaint(1, Color.ORANGE); // labeled sells
+        barActionsRenderer.setSeriesPaint(2, Color.CYAN); // predicted buys
+        barActionsRenderer.setSeriesPaint(3, Color.MAGENTA); // predicted sells
+        Ellipse2D ellipseSmall = new Ellipse2D.Double(-3.0, -3.0, 6.0, 6.0);
+        Ellipse2D ellipseLarge = new Ellipse2D.Double(-6.0, -6.0, 12.0, 12.0);
+        barActionsRenderer.setSeriesShape(0, ellipseSmall);
+        barActionsRenderer.setSeriesShape(1, ellipseSmall);
+        barActionsRenderer.setSeriesShape(2, ellipseLarge);
+        barActionsRenderer.setSeriesShape(3, ellipseLarge);
+        mainPlot.setRenderer(1, barActionsRenderer);
 
 //        final long ONE_DAY = 24 * 60 * 60 * 1000;
 //        XYLineAndShapeRenderer maRenderer = new XYLineAndShapeRenderer(true, false);

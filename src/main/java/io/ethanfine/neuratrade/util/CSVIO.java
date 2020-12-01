@@ -30,22 +30,31 @@ public class CSVIO {
 
             String[] filePathDirSplit = filePath.split("/");
             String fileName = filePathDirSplit[filePathDirSplit.length - 1];
-            String[] productNameSplit = fileName.split(",");
-            CBProduct product = CBProduct.from(productNameSplit[0]);
-            String[] timeGranularitySplit = productNameSplit[1].split("\\.");
-            boolean proprietaryFileFormat = true;
-            int timeGranularitySeconds = Integer.parseInt(timeGranularitySplit[0]);
+            String[] metaDataSplit = fileName.split("\\.");
+            String[] metaData = metaDataSplit[0].split(",");
+            CBProduct product = CBProduct.from(metaData[0]);
+            int timeGranularitySeconds = Integer.parseInt(metaData[1]);
             CBTimeGranularity timeGranularity = CBTimeGranularity.from(timeGranularitySeconds);
+            boolean labeledFileFormat = false;
+            boolean predictedFileFormat = false;
+            if (metaData.length > 2) {
+                if (metaData[2].equals("TDATA"))
+                    labeledFileFormat = true;
+                if (metaData[2].equals("PDATA"))
+                    predictedFileFormat = true;
+            }
 
             String line = "";
             int i = 0;
             BarSeries barSeries = new BaseBarSeriesBuilder().withName(product.productName).build();
-            ArrayList<Pair<Double[], BarAction>> bdsSupplementalData = new ArrayList<>();
+            ArrayList<Pair<Double[], Pair<BarAction, BarAction>>> bdsSupplementalData = new ArrayList<>();
+            String csvCont = "";
             while ((line = bufferedReader.readLine()) != null) {
                 i++;
                 if (i == 1) {
                     continue;
                 }
+                csvCont += line + "\n";
                 String[] rawDataPoint = line.split(",");
                 long epochSeconds = Long.parseLong(rawDataPoint[0]);
                 ZonedDateTime zdtFromEpoch = ZonedDateTime.ofInstant(Instant.ofEpochSecond(epochSeconds), ZoneId.systemDefault());
@@ -57,44 +66,62 @@ public class CSVIO {
                 // TODO: fix that low and close appear to be the same
                 double close = Double.parseDouble(rawDataPoint[4]);
                 double rsi = Double.parseDouble(rawDataPoint[5]);
-                double sma20 = Double.parseDouble(rawDataPoint[6]);
-                double sma50 = Double.parseDouble(rawDataPoint[7]);
-                double sma200 = Double.parseDouble(rawDataPoint[8]);
-                double volume = Double.parseDouble(rawDataPoint[9]);
+                double basisOfBB = Double.parseDouble(rawDataPoint[6]);
+                double upperOfBB = Double.parseDouble(rawDataPoint[7]);
+                double lowerOfBB = Double.parseDouble(rawDataPoint[8]);
+                double sma20 = Double.parseDouble(rawDataPoint[9]);
+                double sma50 = Double.parseDouble(rawDataPoint[10]);
+                double sma200 = Double.parseDouble(rawDataPoint[11]);
+                double volume = Double.parseDouble(rawDataPoint[12]);
                 double macd;
-                BarAction barAction = null;
-                if (proprietaryFileFormat) {
-                    macd = Double.parseDouble(rawDataPoint[10]);
-                    barAction = BarAction.from(rawDataPoint[11]);
+                double widthOfBB;
+                BarAction labelBarAction = null;
+                BarAction predictedBarAction = null;
+                if (labeledFileFormat || predictedFileFormat) {
+                    macd = Double.parseDouble(rawDataPoint[13]);
+                    widthOfBB = Double.parseDouble(rawDataPoint[14]);
+                    labelBarAction = BarAction.from(rawDataPoint[15]);
+                    if (predictedFileFormat)
+                        predictedBarAction = BarAction.from(rawDataPoint[16]);
                 } else {
-                    macd = Double.parseDouble(rawDataPoint[11]);
+                    macd = Double.parseDouble(rawDataPoint[14]);
+                    widthOfBB = Double.parseDouble(rawDataPoint[17]);
                 }
-                // TODO: parse more supplemental data
-                Double[] supplementalDoubleData = {rsi, sma20, sma50, sma200, (double) epochSeconds, macd};
-                System.out.println(supplementalDoubleData);
-                Pair<Double[], BarAction> supplementalData = new Pair<>(supplementalDoubleData, barAction);
+                Double[] supplementalDoubleData = {rsi, basisOfBB, upperOfBB, lowerOfBB, sma20, sma50, sma200, macd, widthOfBB, (double) epochSeconds};
+                Pair<Double[], Pair<BarAction, BarAction>> supplementalData = new Pair<>(supplementalDoubleData, new Pair<>(labelBarAction, predictedBarAction));
                 bdsSupplementalData.add(supplementalData);
-                barSeries.addBar(zdtFromEpoch, open, high, low, close, volume);
+                try {
+                    barSeries.addBar(zdtFromEpoch, open, high, low, close, volume);
+                } catch (Exception e) {
+                    System.out.println(e.getMessage());
+                }
             }
 
             BarDataSeries bds = new BarDataSeries(product, barSeries, timeGranularity);
             for (int bdsI = 0; bdsI < bds.getBarCount(); bdsI++) {
-                Pair<Double[], BarAction> sdI = bdsSupplementalData.get(bdsI);
+                Pair<Double[], Pair<BarAction, BarAction>> sdI = bdsSupplementalData.get(bdsI);
                 Double[] sddI = sdI.getKey();
                 BarDataPoint bdpI = bds.getBarDataPoint(bdsI);
                 bdpI.rsi = sddI[0];
-                bdpI.sma20 = sddI[1];
-                bdpI.sma50 = sddI[2];
-                bdpI.sma200 = sddI[3];
-                bdpI.epochDebugTODORM = sddI[4];
-                bdpI.macd = sddI[5];
-                BarAction baI = sdI.getValue();
-                if (baI != null) {
-                    bdpI.barAction = baI;
-                }
+                bdpI.basisOfBB = sddI[1];
+                bdpI.upperOfBB = sddI[2];
+                bdpI.lowerOfBB = sddI[3];
+                bdpI.sma20 = sddI[4];
+                bdpI.sma50 = sddI[5];
+                bdpI.sma200 = sddI[6];
+                bdpI.macd = sddI[7];
+                bdpI.widthOfBB = sddI[8];
+                bdpI.epochDebugTODORM = sddI[9];
+                Pair<BarAction, BarAction> basI = sdI.getValue();
+                BarAction labeledBarAction = basI.getKey();
+                BarAction predictedBarAction = basI.getValue();
+                if (labeledBarAction != null)
+                    bdpI.barActionLabeled = labeledBarAction;
+                if (predictedBarAction != null)
+                    bdpI.barActionPredicted = predictedBarAction;
             }
             return bds;
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.out.println("Failed to read CSV file at path: " + e.getMessage());
         }
         return null;
@@ -106,14 +133,15 @@ public class CSVIO {
            File file = new File(filePath);
            if (file.createNewFile()) {
                FileWriter fw = new FileWriter(filePath);
-               fw.write("time,open,high,low,close,RSI,SMA20,SMA50,SMA200,Volume,MACD,BarAction\n");
+               fw.write("time,open,high,low,close,RSI,basisOfBB,upperOfBB,lowerOfBB,SMA20,SMA50,SMA200,Volume,MACD,widthOfBB,BarAction\n");
+               System.out.println("BDS bar count: " + bds.getBarCount());
                for (int i = 0; i < bds.getBarCount(); i++) {
                    BarDataPoint bdpI = bds.getBarDataPoint(i);
-                   fw.write(bdpI.bar.getBeginTime().toEpochSecond() + "," + bdpI.bar.getOpenPrice() + "," + bdpI.bar.getHighPrice() + "," + bdpI.bar.getLowPrice() + "," + bdpI.bar.getClosePrice() + "," + bdpI.rsi + "," + bdpI.sma20 + "," + bdpI.sma50 + ","  + bdpI.sma200 + ","  + bdpI.bar.getVolume() + ","  + bdpI.macd + ","  + bdpI.barAction.stringRep + "\n");
+                   String predictedBarActionStrRep = bdpI.barActionPredicted == null ? "" : "," + bdpI.barActionPredicted.stringRep;
+                   fw.write(bdpI.bar.getBeginTime().toEpochSecond() + "," + bdpI.bar.getOpenPrice() + "," + bdpI.bar.getHighPrice() + "," + bdpI.bar.getLowPrice() + "," + bdpI.bar.getClosePrice() + "," + bdpI.rsi + "," + bdpI.basisOfBB + "," + bdpI.upperOfBB + "," + bdpI.lowerOfBB + "," + bdpI.sma20 + "," + bdpI.sma50 + ","  + bdpI.sma200 + ","  + bdpI.bar.getVolume() + ","  + bdpI.macd + "," + bdpI.widthOfBB + ","  + bdpI.barActionLabeled.stringRep + predictedBarActionStrRep + "\n");
                }
                fw.flush();
                fw.close();
-               // TODO: check why not all BDPs appear to be written
            } else {
                System.out.println("File already exists at " + filePath);
            }
