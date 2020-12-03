@@ -1,10 +1,12 @@
 package io.ethanfine.neuratrade.util;
 
+import ai.djl.translate.TranslateException;
 import io.ethanfine.neuratrade.coinbase.models.CBProduct;
 import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.data.models.BarAction;
 import io.ethanfine.neuratrade.data.models.BarDataPoint;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
+import io.ethanfine.neuratrade.neural_network.NNModel;
 import javafx.util.Pair;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.BaseBarSeriesBuilder;
@@ -59,11 +61,10 @@ public class CSVIO {
                 long epochSeconds = Long.parseLong(rawDataPoint[0]);
                 ZonedDateTime zdtFromEpoch = ZonedDateTime.ofInstant(Instant.ofEpochSecond(epochSeconds), ZoneId.systemDefault());
                 zdtFromEpoch = zdtFromEpoch.plusDays(1);
-                // TODO: remove above line; epochSeconds is correct, conversion isn't
+                // TODO: check above line; epochSeconds is correct, conversion might not be
                 double open = Double.parseDouble(rawDataPoint[1]);
                 double high = Double.parseDouble(rawDataPoint[2]);
                 double low = Double.parseDouble(rawDataPoint[3]);
-                // TODO: fix that low and close appear to be the same
                 double close = Double.parseDouble(rawDataPoint[4]);
                 double rsi = Double.parseDouble(rawDataPoint[5]);
                 double basisOfBB = Double.parseDouble(rawDataPoint[6]);
@@ -97,6 +98,7 @@ public class CSVIO {
                 }
             }
 
+            int nnImportCorrect = 0;
             BarDataSeries bds = new BarDataSeries(product, barSeries, timeGranularity);
             for (int bdsI = 0; bdsI < bds.getBarCount(); bdsI++) {
                 Pair<Double[], Pair<BarAction, BarAction>> sdI = bdsSupplementalData.get(bdsI);
@@ -119,7 +121,21 @@ public class CSVIO {
                     bdpI.barActionLabeled = labeledBarAction;
                 if (predictedBarAction != null)
                     bdpI.barActionPredicted = predictedBarAction;
+                try {
+                    String pyTorchPred = "";
+                    if (predictedBarAction != null) {
+                        pyTorchPred = ", Predicted (PyTorch): " + bdpI.barActionPredicted;
+                        if (NNModel.predict(bdpI.neuralNetworkInputs()) == bdpI.barActionPredicted)
+                            nnImportCorrect++;
+                        //bdpI.barActionPredicted = NNModel.predict(bdpI.neuralNetworkInputs());
+                    }
+                    System.out.println("Predicted (DJL): " + NNModel.predict(bdpI.neuralNetworkInputs()) + pyTorchPred);
+                } catch (TranslateException e)  {
+                    System.out.println(e.getMessage());
+                }
             }
+            System.out.println("DJL accuracy: " + nnImportCorrect + " / " + bds.getBarCount());
+
             return bds;
         } catch (IOException e) {
             System.out.println("Failed to read CSV file at path: " + e.getMessage());

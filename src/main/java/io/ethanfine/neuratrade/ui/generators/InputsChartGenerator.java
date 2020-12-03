@@ -1,7 +1,20 @@
 package io.ethanfine.neuratrade.ui.generators;
 
+import ai.djl.Model;
+import ai.djl.inference.Predictor;
+import ai.djl.modality.Classifications;
+import ai.djl.ndarray.NDArray;
+import ai.djl.ndarray.NDList;
+import ai.djl.ndarray.NDManager;
+import ai.djl.repository.zoo.Criteria;
+import ai.djl.repository.zoo.ModelZoo;
+import ai.djl.training.util.ProgressBar;
+import ai.djl.translate.Batchifier;
+import ai.djl.translate.Translator;
+import ai.djl.translate.TranslatorContext;
 import io.ethanfine.neuratrade.Config;
 import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
+import io.ethanfine.neuratrade.data.models.BarAction;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
 import io.ethanfine.neuratrade.util.DataSetUtil;
 import org.jfree.chart.JFreeChart;
@@ -16,6 +29,8 @@ import org.jfree.data.xy.XYDataset;
 
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class InputsChartGenerator {
 

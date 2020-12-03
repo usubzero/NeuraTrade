@@ -43,6 +43,28 @@ public class BarDataPoint {
     }
 
     /**
+     * Normalizes a price.
+     * @param price Price to normalize.
+     * @return price, normalized.
+     */
+    private double normalizePrice(double price) {
+        return (price - basisOfBB) / (upperOfBB - lowerOfBB);
+    }
+
+    /**
+     * The input values to be fed into the neural network.
+     * @return relevant input values for neural network use.
+     */
+    public double[] neuralNetworkInputs() {
+        double priceNorm = normalizePrice(bar.getClosePrice().doubleValue());
+        double sma20Norm = normalizePrice(sma20);
+        double sma50Norm = normalizePrice(sma50);
+        double sma200Norm = normalizePrice(sma200);
+        double volume = bar.getVolume().doubleValue();
+        return new double[] { rsi, priceNorm, sma20Norm, sma50Norm, sma200Norm, volume, macd, widthOfBB };
+    }
+
+    /**
      * Calculates the percent difference between the highest price and lowest price within this data point's interval.
      * @return Volatility during this data point's interval.
      */

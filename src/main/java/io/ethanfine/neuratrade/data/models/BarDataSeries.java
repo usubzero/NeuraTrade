@@ -1,5 +1,13 @@
 package io.ethanfine.neuratrade.data.models;
 
+import ai.djl.Model;
+import ai.djl.inference.Predictor;
+import ai.djl.ndarray.NDArray;
+import ai.djl.ndarray.NDList;
+import ai.djl.ndarray.NDManager;
+import ai.djl.translate.Batchifier;
+import ai.djl.translate.Translator;
+import ai.djl.translate.TranslatorContext;
 import io.ethanfine.neuratrade.Config;
 import io.ethanfine.neuratrade.coinbase.models.CBProduct;
 import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
@@ -18,6 +26,8 @@ import org.ta4j.core.indicators.helpers.HighPriceIndicator;
 import org.ta4j.core.indicators.helpers.LowPriceIndicator;
 import org.ta4j.core.num.Num;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Map;
 
