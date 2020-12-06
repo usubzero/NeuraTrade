@@ -1,8 +1,10 @@
 package io.ethanfine.neuratrade.ui;
 
+import ai.djl.translate.TranslateException;
 import io.ethanfine.neuratrade.Config;
 import io.ethanfine.neuratrade.coinbase.CBPublicData;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
+import io.ethanfine.neuratrade.neural_network.NNModel;
 import io.ethanfine.neuratrade.ui.generators.InputsChartGenerator;
 import io.ethanfine.neuratrade.ui.generators.MenuBarGenerator;
 import io.ethanfine.neuratrade.ui.generators.ParametersPanelManager;
@@ -146,10 +148,11 @@ public class UIMain {
     }
 
     /**
-     * Update the data displayed on all UI elements. Retrieve new data and display relevant data on the ticker price
-     * label, on the RSI label, and refresh the chart panel by removing it and generating a new one.
+     * Update the data displayed on all UI elements to reflect the data in bds. Update the ticker price
+     * label, on the RSI label, and refresh the chart panel.
+     * @param bds The BarDataSeries whose information should be displayed on the UI elements.
      */
-    public void refreshUIDynamicElements() {
+    private void refreshUIDynamicElements(BarDataSeries bds) {
         if (State.displayBDSisImported()) {
             // TODO: change to display file name of file from which data was imported
             priceLabel.setVisible(false);
@@ -160,9 +163,6 @@ public class UIMain {
             rsiLabel.setVisible(true);
         }
 
-//        Config.shared.timeGranularity = CBTimeGranularity.MINUTE;
-//        BarSeries recentBarSeries = getRecentBarSeries();
-        BarDataSeries bds = State.getDisplayBDS();
         String rsiLabelTitle = "RSI RETRIEVAL ERROR";
         if (bds != null) {
             double rsi = bds.getBarDataPoint(bds.getBarCount() - 1).rsi;
@@ -179,6 +179,23 @@ public class UIMain {
     }
 
     /**
+     * Update the data to be displayed and refresh UI dynamic elements that display such data.
+     */
+    public void refresh() {
+        BarDataSeries bds = State.getDisplayBDS();
+        refreshUIDynamicElements(bds);
+
+        // NN CODE EXAMPLE:
+        try {
+            NNModel model = State.nnModelForDisplayBDS();
+            double[] input = new double[] {53.0, -2., -0.2, 0.1, 0.1, 4000, 26.31, 0.11};
+            System.out.println("Prediction on input: " + model.predict(input));
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
+    /**
      * Create a thread which sleeps other than every 20 seconds, when it is awake simply to refresh the dynamic elements
      * of the UI.
      */
@@ -186,9 +203,8 @@ public class UIMain {
         new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(20000 ); /* TODO: find suitable time; must be > 1000ms if retrieving bar series
-                    due to API restrictions, but would want to change so that bar series isn't retrieved every time ticker is */
-                    refreshUIDynamicElements();
+                    Thread.sleep(20000 );
+                    refresh();
                 } catch (Exception e) {
                     priceLabel.setText("PRICE RETRIEVAL ERROR");
                     rsiLabel.setText("RSI RETRIEVAL ERROR");

@@ -3,6 +3,7 @@ package io.ethanfine.neuratrade.ui;
 import io.ethanfine.neuratrade.Config;
 import io.ethanfine.neuratrade.coinbase.CBPublicData;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
+import io.ethanfine.neuratrade.neural_network.NNModel;
 import org.ta4j.core.BarSeries;
 
 public class State {
@@ -82,6 +83,16 @@ public class State {
      */
     public static void setImportedBDS(BarDataSeries bds) {
         importedBDS = bds;
+    }
+
+    /**
+     * Get a neural network prediction model appropriate for predicting data of the same product and time granularity as
+     * that of the BarDataSeries returned by getDisplayBDS().
+     * @return Neural network prediction model.
+     */
+    public static NNModel nnModelForDisplayBDS() {
+        BarDataSeries displayBDS = getDisplayBDS();
+        return new NNModel(displayBDS.product, displayBDS.timeGranularity);
     }
 
 }

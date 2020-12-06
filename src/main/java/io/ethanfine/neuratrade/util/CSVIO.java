@@ -122,15 +122,16 @@ public class CSVIO {
                 if (predictedBarAction != null)
                     bdpI.barActionPredicted = predictedBarAction;
                 try {
+                    NNModel model = new NNModel(CBProduct.BTCUSD, CBTimeGranularity.HOUR_FOUR);
                     String pyTorchPred = "";
                     if (predictedBarAction != null) {
                         pyTorchPred = ", Predicted (PyTorch): " + bdpI.barActionPredicted;
-                        if (NNModel.predict(bdpI.neuralNetworkInputs()) == bdpI.barActionPredicted)
+                        if (model.predict(bdpI.neuralNetworkInputs()) == bdpI.barActionPredicted)
                             nnImportCorrect++;
-                        //bdpI.barActionPredicted = NNModel.predict(bdpI.neuralNetworkInputs());
+                        //bdpI.barActionPredicted = model.predict(bdpI.neuralNetworkInputs());
                     }
-                    System.out.println("Predicted (DJL): " + NNModel.predict(bdpI.neuralNetworkInputs()) + pyTorchPred);
-                } catch (TranslateException e)  {
+                    System.out.println("Predicted (DJL): " + model.predict(bdpI.neuralNetworkInputs()) + pyTorchPred);
+                } catch (Exception e)  {
                     System.out.println(e.getMessage());
                 }
             }

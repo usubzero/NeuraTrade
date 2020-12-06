@@ -29,8 +29,6 @@ import org.jfree.data.xy.XYDataset;
 
 import java.awt.*;
 import java.awt.geom.Ellipse2D;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class InputsChartGenerator {
 

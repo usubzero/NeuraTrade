@@ -103,7 +103,7 @@ public class ParametersPanelManager implements ActionListener {
         }
         // TODO: reset to previous value if request for new data fails on live data selectors
 
-        ui.refreshUIDynamicElements();
+        ui.refresh();
     }
 
 }

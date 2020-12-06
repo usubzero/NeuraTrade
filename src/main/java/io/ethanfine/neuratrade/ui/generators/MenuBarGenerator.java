@@ -54,7 +54,7 @@ public class MenuBarGenerator implements ActionListener {
         if  (fileChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
             BarDataSeries bdsFromCSV = CSVIO.readFile(fileChooser.getSelectedFile().getAbsolutePath());
             State.setImportedBDS(bdsFromCSV);
-            ui.refreshUIDynamicElements();
+            ui.refresh();
         }
     }
 

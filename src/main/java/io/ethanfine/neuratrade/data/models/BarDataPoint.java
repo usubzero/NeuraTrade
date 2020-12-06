@@ -57,6 +57,12 @@ public class BarDataPoint {
      */
     public double[] neuralNetworkInputs() {
         double priceNorm = normalizePrice(bar.getClosePrice().doubleValue());
+//        if (barActionLabeled == BarAction.BUY) {
+//            priceNorm = normalizePrice(bar.getLowPrice().doubleValue());
+//        } else if (barActionLabeled == BarAction.SELL) {
+//            priceNorm = normalizePrice(bar.getHighPrice().doubleValue());
+//        }
+        // uncommenting decreases DJL accuracy?
         double sma20Norm = normalizePrice(sma20);
         double sma50Norm = normalizePrice(sma50);
         double sma200Norm = normalizePrice(sma200);

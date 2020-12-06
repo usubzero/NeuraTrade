@@ -1,19 +1,10 @@
 package io.ethanfine.neuratrade.data.models;
 
-import ai.djl.Model;
-import ai.djl.inference.Predictor;
-import ai.djl.ndarray.NDArray;
-import ai.djl.ndarray.NDList;
-import ai.djl.ndarray.NDManager;
-import ai.djl.translate.Batchifier;
-import ai.djl.translate.Translator;
-import ai.djl.translate.TranslatorContext;
 import io.ethanfine.neuratrade.Config;
 import io.ethanfine.neuratrade.coinbase.models.CBProduct;
 import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.external_data.FNGPublicData;
 import org.ta4j.core.BarSeries;
-import org.ta4j.core.Indicator;
 import org.ta4j.core.indicators.MACDIndicator;
 import org.ta4j.core.indicators.RSIIndicator;
 import org.ta4j.core.indicators.SMAIndicator;
@@ -24,10 +15,7 @@ import org.ta4j.core.indicators.bollinger.BollingerBandsUpperIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 import org.ta4j.core.indicators.helpers.HighPriceIndicator;
 import org.ta4j.core.indicators.helpers.LowPriceIndicator;
-import org.ta4j.core.num.Num;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -39,18 +27,18 @@ public class BarDataSeries {
     private final ArrayList<BarDataPoint> barDataArray;
 
     // Indicators derived from the BarDataPoints in barDataArray
-    public RSIIndicator rsiIndicator;
-    public MACDIndicator macdIndicator;
-    public BollingerBandsMiddleIndicator basisOfBBIndicator;
-    public BollingerBandsUpperIndicator upperOfBBIndicator;
-    public BollingerBandsLowerIndicator lowerOfBBIndicator;
-    public BollingerBandWidthIndicator widthOfBBIndicator;
-    public SMAIndicator sma20Indicator;
-    public SMAIndicator sma50Indicator;
-    public SMAIndicator sma200Indicator;
-    public ClosePriceIndicator closePriceIndicator;
-    public LowPriceIndicator lowestPriceIndicator;
-    public HighPriceIndicator highPriceIndicator;
+    private RSIIndicator rsiIndicator;
+    private MACDIndicator macdIndicator;
+    private BollingerBandsMiddleIndicator basisOfBBIndicator;
+    private BollingerBandsUpperIndicator upperOfBBIndicator;
+    private BollingerBandsLowerIndicator lowerOfBBIndicator;
+    private BollingerBandWidthIndicator widthOfBBIndicator;
+    private SMAIndicator sma20Indicator;
+    private SMAIndicator sma50Indicator;
+    private SMAIndicator sma200Indicator;
+    private ClosePriceIndicator closePriceIndicator;
+    private LowPriceIndicator lowestPriceIndicator;
+    private HighPriceIndicator highPriceIndicator;
 
     public BarDataSeries(CBProduct product, BarSeries barSeries, CBTimeGranularity timeGranularity) {
         this.product = product;
