@@ -15,17 +15,15 @@ public class Config {
     public CBProduct product = CBProduct.BTCUSD;
     public CBTimeGranularity timeGranularity = CBTimeGranularity.DAY;
     public ChartBarCount chartBarCount = ChartBarCount.HUNDRED_TWO;
-    public int rsiCalculationTickCount = 14;
 
     /**
      * Training data generation parameters.
      * BuySellMinVolatilities should be interpreted as percentages.
      */
-    public double minsTimeGranularityBuySellMinVolatility = 1;
-    public double minsFiveTimeGranularityBuySellMinVolatility = 1;
+    public double minsTimeGranularityBuySellMinVolatility = 0.1;
+    public double minsFiveTimeGranularityBuySellMinVolatility = 0.3;
     public double minsFifteenTimeGranularityBuySellMinVolatility = 2;
     public double hourTimeGranularityBuySellMinVolatility = 4;
-    public double hourFourTimeGranularityBuySellMinVolatility = 5;
     public double hourSixTimeGranularityBuySellMinVolatility = 6;
     public double dayTimeGranularityBuySellMinVolatility = 7;
 

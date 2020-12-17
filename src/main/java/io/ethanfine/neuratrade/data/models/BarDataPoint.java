@@ -2,6 +2,8 @@ package io.ethanfine.neuratrade.data.models;
 
 import org.ta4j.core.Bar;
 
+import java.util.ArrayList;
+
 public class BarDataPoint {
 
     /**
@@ -35,7 +37,8 @@ public class BarDataPoint {
     /**
      * The predicted action associated with this data point.
      */
-    public BarAction barActionPredicted;
+    public ArrayList<Trade> tradesPredicted = new ArrayList<>(); // TODO: decide multiple?
+//    public BarAction barActionPredicted;
 
     public BarDataPoint(Bar bar, BarDataSeries barDataSeries) {
         this.bar = bar;

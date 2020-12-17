@@ -6,6 +6,7 @@ import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.data.models.BarAction;
 import io.ethanfine.neuratrade.data.models.BarDataPoint;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
+import io.ethanfine.neuratrade.data.models.Trade;
 import io.ethanfine.neuratrade.neural_network.NNModel;
 import javafx.util.Pair;
 import org.ta4j.core.BarSeries;
@@ -120,16 +121,21 @@ public class CSVIO {
                 if (labeledBarAction != null)
                     bdpI.barActionLabeled = labeledBarAction;
                 if (predictedBarAction != null)
-                    bdpI.barActionPredicted = predictedBarAction;
+                    bdpI.tradesPredicted.add(
+                            new Trade(bdpI.epochDebugTODORM,
+                                    bdpI.bar.getClosePrice().doubleValue(),
+                                    predictedBarAction
+                            )
+                    ); // TODO: intermediate trades
                 try {
-                    NNModel model = new NNModel(CBProduct.BTCUSD, CBTimeGranularity.HOUR_FOUR);
+                    NNModel model = new NNModel(CBProduct.BTCUSD, CBTimeGranularity.MINUTE_FIFTEEN);
                     String pyTorchPred = "";
                     if (predictedBarAction != null) {
-                        pyTorchPred = ", Predicted (PyTorch): " + bdpI.barActionPredicted;
-                        if (model.predict(bdpI.neuralNetworkInputs()) == bdpI.barActionPredicted)
+                        pyTorchPred = ", Predicted (PyTorch): " + predictedBarAction;
+                        if (model.predict(bdpI.neuralNetworkInputs()) == predictedBarAction)
                             nnImportCorrect++;
-                        //bdpI.barActionPredicted = model.predict(bdpI.neuralNetworkInputs());
                     }
+//                    bdpI.barActionPredicted = model.predict(bdpI.neuralNetworkInputs());
                     System.out.println("Predicted (DJL): " + model.predict(bdpI.neuralNetworkInputs()) + pyTorchPred);
                 } catch (Exception e)  {
                     System.out.println(e.getMessage());
@@ -154,7 +160,8 @@ public class CSVIO {
                System.out.println("BDS bar count: " + bds.getBarCount());
                for (int i = 0; i < bds.getBarCount(); i++) {
                    BarDataPoint bdpI = bds.getBarDataPoint(i);
-                   String predictedBarActionStrRep = bdpI.barActionPredicted == null ? "" : "," + bdpI.barActionPredicted.stringRep;
+//                   String predictedBarActionStrRep = bdpI.barActionPredicted == null ? "" : "," + bdpI.barActionPredicted.stringRep;
+                   String predictedBarActionStrRep = bdpI.tradesPredicted.isEmpty() ? "" : bdpI.tradesPredicted.get(bdpI.tradesPredicted.size() - 1).barAction.stringRep;
                    fw.write(bdpI.bar.getBeginTime().toEpochSecond() + "," + bdpI.bar.getOpenPrice() + "," + bdpI.bar.getHighPrice() + "," + bdpI.bar.getLowPrice() + "," + bdpI.bar.getClosePrice() + "," + bdpI.rsi + "," + bdpI.basisOfBB + "," + bdpI.upperOfBB + "," + bdpI.lowerOfBB + "," + bdpI.sma20 + "," + bdpI.sma50 + ","  + bdpI.sma200 + ","  + bdpI.bar.getVolume() + ","  + bdpI.macd + "," + bdpI.widthOfBB + ","  + bdpI.barActionLabeled.stringRep + predictedBarActionStrRep + "\n");
                }
                fw.flush();

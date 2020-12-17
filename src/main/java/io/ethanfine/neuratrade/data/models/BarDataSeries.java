@@ -5,6 +5,7 @@ import io.ethanfine.neuratrade.coinbase.models.CBProduct;
 import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.external_data.FNGPublicData;
 import org.ta4j.core.BarSeries;
+import org.ta4j.core.indicators.EMAIndicator;
 import org.ta4j.core.indicators.MACDIndicator;
 import org.ta4j.core.indicators.RSIIndicator;
 import org.ta4j.core.indicators.SMAIndicator;
@@ -13,9 +14,12 @@ import org.ta4j.core.indicators.bollinger.BollingerBandsLowerIndicator;
 import org.ta4j.core.indicators.bollinger.BollingerBandsMiddleIndicator;
 import org.ta4j.core.indicators.bollinger.BollingerBandsUpperIndicator;
 import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
+import org.ta4j.core.indicators.helpers.DifferenceIndicator;
 import org.ta4j.core.indicators.helpers.HighPriceIndicator;
 import org.ta4j.core.indicators.helpers.LowPriceIndicator;
+import org.ta4j.core.indicators.statistics.StandardDeviationIndicator;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -28,7 +32,7 @@ public class BarDataSeries {
 
     // Indicators derived from the BarDataPoints in barDataArray
     private RSIIndicator rsiIndicator;
-    private MACDIndicator macdIndicator;
+    private DifferenceIndicator macdIndicator;
     private BollingerBandsMiddleIndicator basisOfBBIndicator;
     private BollingerBandsUpperIndicator upperOfBBIndicator;
     private BollingerBandsLowerIndicator lowerOfBBIndicator;
@@ -46,12 +50,18 @@ public class BarDataSeries {
         this.timeGranularity = timeGranularity;
 
         closePriceIndicator = new ClosePriceIndicator(barSeries);
-        rsiIndicator = new RSIIndicator(closePriceIndicator, Config.shared.rsiCalculationTickCount);
-        macdIndicator = new MACDIndicator(closePriceIndicator);
-        // TODO: BB indicators for live data CSV exporting
+        rsiIndicator = new RSIIndicator(closePriceIndicator, 14);
+        MACDIndicator macdIndicator = new MACDIndicator(closePriceIndicator);
+        EMAIndicator macdSignalIndicator = new EMAIndicator(macdIndicator, 9);
+        this.macdIndicator = new DifferenceIndicator(macdIndicator, macdSignalIndicator);
         sma20Indicator = new SMAIndicator(closePriceIndicator, 20);
         sma50Indicator = new SMAIndicator(closePriceIndicator, 50);
         sma200Indicator = new SMAIndicator(closePriceIndicator, 200);
+        StandardDeviationIndicator sd20Indicator = new StandardDeviationIndicator(closePriceIndicator, 20);
+        basisOfBBIndicator = new BollingerBandsMiddleIndicator(sma20Indicator);
+        lowerOfBBIndicator = new BollingerBandsLowerIndicator(basisOfBBIndicator, sd20Indicator);
+        upperOfBBIndicator = new BollingerBandsUpperIndicator(basisOfBBIndicator, sd20Indicator);
+        widthOfBBIndicator = new BollingerBandWidthIndicator(upperOfBBIndicator, basisOfBBIndicator, lowerOfBBIndicator);
         lowestPriceIndicator = new LowPriceIndicator(barSeries);
         highPriceIndicator = new HighPriceIndicator(barSeries);
 
@@ -70,9 +80,13 @@ public class BarDataSeries {
             BarDataPoint bdp = new BarDataPoint(barSeries.getBar(i), this); // TODO: watch out for strong reference cycles
             bdp.rsi = rsiIndicator.getValue(i).doubleValue();
             bdp.macd = macdIndicator.getValue(i).doubleValue();
+            bdp.basisOfBB = basisOfBBIndicator.getValue(i).doubleValue();
+            bdp.lowerOfBB = lowerOfBBIndicator.getValue(i).doubleValue();
+            bdp.upperOfBB = upperOfBBIndicator.getValue(i).doubleValue();
             bdp.sma20 = sma20Indicator.getValue(i).doubleValue();
             bdp.sma50 = sma50Indicator.getValue(i).doubleValue();
             bdp.sma200 = sma200Indicator.getValue(i).doubleValue();
+            bdp.widthOfBB = widthOfBBIndicator.getValue(i).doubleValue() / 100;
             barDataArray.add(bdp);
         }
     }
@@ -256,6 +270,70 @@ public class BarDataSeries {
      */
     public double expectedPercentReturn() {
         return 0.0; // TODO
+    }
+
+    // TODO: doc
+    public ArrayList<Trade> tradesForPredictedBarAction(BarAction barAction) {
+        ArrayList<Trade> trades = new ArrayList<>();
+        for (int i = 0; i < getBarCount(); i++) {
+            BarDataPoint bdpI = getBarDataPoint(i);
+            ArrayList<Trade>  bdpBarActionTrades = new ArrayList<>(bdpI.tradesPredicted);
+            bdpBarActionTrades.removeIf(trade -> trade.barAction != barAction);
+            trades.addAll(bdpBarActionTrades);
+        }
+        return trades;
+    }
+
+    // TODO: doc
+    public double basisReturn() {
+        if (barDataArray.size() >= 2) {
+            double open = barDataArray.get(0).bar.getOpenPrice().doubleValue();
+            double close = barDataArray.get(barDataArray.size() - 1).bar.getClosePrice().doubleValue();
+            return (close - open) / open * 100;
+        }
+        return 0;
+    }
+
+    // TODO: doc
+    public double predictionsReturn() {
+        if (barDataArray.size() >= 2) {
+            ArrayList<Trade> buyTrades = tradesForPredictedBarAction(BarAction.BUY);
+            ArrayList<Trade> sellTrades = tradesForPredictedBarAction(BarAction.SELL);
+            int buyTradesI = 0;
+            int sellTradesI = 0;
+            double investmentVal = 1;
+            boolean holding = false;
+            Trade lBuyTrade = null;
+            Trade lSellTrade = null;
+            while(!buyTrades.isEmpty() || !sellTrades.isEmpty()) {
+                Trade lBuyTradeF = lBuyTrade;
+                Trade lSellTradeF = lSellTrade;
+                if (lBuyTradeF != null) {
+                    buyTrades.removeIf(t -> t.epoch < lBuyTradeF.epoch);
+                    sellTrades.removeIf(t -> t.epoch < lBuyTradeF.epoch);
+                }
+                if (lSellTradeF != null) {
+                    buyTrades.removeIf(t -> t.epoch < lSellTradeF.epoch);
+                    sellTrades.removeIf(t -> t.epoch < lSellTradeF.epoch);
+                }
+                if (holding && lBuyTrade != null) {
+                    if (sellTrades.isEmpty()) break;
+                    lSellTrade = sellTrades.get(0);
+                    holding = false;
+                    investmentVal += (lSellTrade.price - lBuyTrade.price) / lBuyTrade.price * investmentVal;
+                } else {
+                    if (buyTrades.isEmpty()) break;
+                    lBuyTrade = buyTrades.get(0);
+                    holding = true;
+                }
+            }
+            if (lBuyTrade != null && (lSellTrade == null || lBuyTrade.epoch > lSellTrade.epoch)) {
+                double closePrice = barDataArray.get(barDataArray.size() - 1).bar.getClosePrice().doubleValue();
+                investmentVal += (closePrice - lBuyTrade.price) / lBuyTrade.price * investmentVal;
+            }
+            return (investmentVal - 1) * 100;
+        }
+        return 0;
     }
 
 }

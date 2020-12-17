@@ -13,7 +13,6 @@ public enum CBTimeGranularity {
     MINUTE_FIVE(300),
     MINUTE_FIFTEEN(900),
     HOUR(3600),
-    HOUR_FOUR(14400),
     HOUR_SIX(21600),
     DAY(86400);
 
@@ -47,8 +46,6 @@ public enum CBTimeGranularity {
                 return Config.shared.minsFifteenTimeGranularityBuySellMinVolatility;
             case HOUR:
                 return Config.shared.hourTimeGranularityBuySellMinVolatility;
-            case HOUR_FOUR:
-                return Config.shared.hourFourTimeGranularityBuySellMinVolatility;
             case HOUR_SIX:
                 return Config.shared.hourSixTimeGranularityBuySellMinVolatility;
             case DAY:

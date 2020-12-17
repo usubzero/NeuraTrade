@@ -3,7 +3,12 @@ package io.ethanfine.neuratrade.ui;
 import ai.djl.translate.TranslateException;
 import io.ethanfine.neuratrade.Config;
 import io.ethanfine.neuratrade.coinbase.CBPublicData;
+import io.ethanfine.neuratrade.coinbase.models.CBProduct;
+import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
+import io.ethanfine.neuratrade.data.models.BarAction;
+import io.ethanfine.neuratrade.data.models.BarDataPoint;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
+import io.ethanfine.neuratrade.data.models.Trade;
 import io.ethanfine.neuratrade.neural_network.NNModel;
 import io.ethanfine.neuratrade.ui.generators.InputsChartGenerator;
 import io.ethanfine.neuratrade.ui.generators.MenuBarGenerator;
@@ -26,8 +31,11 @@ public class UIMain {
 
     public JFrame frame;
     ChartPanel chartPanel;
+    JPanel sideLabelsPanel;
     JLabel priceLabel;
     JLabel rsiLabel;
+    JLabel basisReturnLabel;
+    JLabel predictionsReturnLabel;
     ParametersPanelManager parametersPanelManager;
     InputsChartGenerator inputsChartGenerator;
 
@@ -50,19 +58,20 @@ public class UIMain {
      */
     private void loadFrameContent() {
         frame.setJMenuBar(new MenuBarGenerator(this).generateMenuBar());
-        loadTickerPriceLabel();
-        loadRSILabel();
-        parametersPanelManager = new ParametersPanelManager(this);
 
         BarSeries recentBarSeries = State.getRecentBarSeries();
+        BarDataSeries bds = null;
         if (recentBarSeries != null && !recentBarSeries.isEmpty()) {
-            BarDataSeries bds = new BarDataSeries(
+            bds = new BarDataSeries(
                     Config.shared.product,
                     recentBarSeries,
                     Config.shared.timeGranularity
             );
-            initiateInputChartsPanel(bds);
         }
+
+        loadLabels(bds);
+        parametersPanelManager = new ParametersPanelManager(this);
+        initiateInputChartsPanel(bds);
 
         beginRefreshCycle();
     }
@@ -91,17 +100,13 @@ public class UIMain {
     }
 
     /**
-     * Retrieves the most recent bar series for the product selected in Config, creates a JLabel with the RSI value
-     * calculated from such bar series as such label's title, and adds the label to the frame.
+     * Creates a JLabel with the most recent RSI value from bds as such label's title, and adds the label to the frame.
+     * @param bds The BarDataSeries to base the RSI value off of.
      */
-    private void loadRSILabel() {
-        BarSeries recentBarSeries = State.getRecentBarSeries();
-
+    private void loadRSILabel(BarDataSeries bds) {
         String labelTitle = "RSI RETRIEVAL ERROR";
-        if (recentBarSeries != null && !recentBarSeries.isEmpty()) {
-            ClosePriceIndicator closePrice = new ClosePriceIndicator(recentBarSeries);
-            RSIIndicator rsiIndicator = new RSIIndicator(closePrice, Config.shared.rsiCalculationTickCount);
-            double rsi = rsiIndicator.getValue(Config.shared.chartBarCount.value - 1).doubleValue();
+        if (bds != null && bds.getBarCount() != 0) {
+            double rsi = bds.getBarDataPoint(bds.getBarCount() - 1).rsi;
             labelTitle = "RSI: " + Util.formatDouble(rsi, 2);
         }
 
@@ -109,7 +114,26 @@ public class UIMain {
         rsiLabel.setVerticalTextPosition(JLabel.BOTTOM);
         rsiLabel.setHorizontalTextPosition(JLabel.CENTER);
 
-        frame.add(rsiLabel, BorderLayout.EAST);
+        sideLabelsPanel.add(rsiLabel, BorderLayout.SOUTH);
+    }
+
+    // TODO: doc
+    private void loadLabels(BarDataSeries bds) {
+        sideLabelsPanel = new JPanel();
+        frame.add(sideLabelsPanel, BorderLayout.EAST);
+
+        basisReturnLabel = new JLabel("Basis return: " + bds.basisReturn() + "%");
+        basisReturnLabel.setVerticalTextPosition(JLabel.BOTTOM);
+        basisReturnLabel.setHorizontalTextPosition(JLabel.CENTER);
+        sideLabelsPanel.add(basisReturnLabel, BorderLayout.NORTH);
+
+        predictionsReturnLabel = new JLabel("Predictions return: " + bds.predictionsReturn() + "%");
+        predictionsReturnLabel.setVerticalTextPosition(JLabel.BOTTOM);
+        predictionsReturnLabel.setHorizontalTextPosition(JLabel.CENTER);
+        sideLabelsPanel.add(predictionsReturnLabel, BorderLayout.CENTER);
+
+        loadTickerPriceLabel();
+        loadRSILabel(bds);
     }
 
     // TODO: move several methods below into model class
@@ -124,25 +148,17 @@ public class UIMain {
 //        XYDataset labelsDataset = DataSetUtil.createTrainingChartDataset(barDataSeries);
 //        XYDataset fngDataset = DataSetUtil.createFNGDataset(barDataSeries);
 //        JFreeChart chart = createChart(barDataSeries, priceDataset, labelsDataset,  fngDataset, Config.shared.timeGranularity);
+        if (barDataSeries == null)
+            return;
+
+        if (chartPanel != null) {
+            frame.getContentPane().remove(chartPanel);
+        }
         inputsChartGenerator = new InputsChartGenerator(barDataSeries);
         JFreeChart inputsChart = inputsChartGenerator.generateChart();
         chartPanel = new ChartPanel(inputsChart);
         chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         chartPanel.setBackground(Color.WHITE);
-        chartPanel.setHorizontalAxisTrace(true);
-        chartPanel.setVerticalAxisTrace(true);
-        chartPanel.addChartMouseListener(new ChartMouseListener() {
-
-            @Override
-            public void chartMouseClicked(ChartMouseEvent e) {
-                final ChartEntity entity = e.getEntity();
-                System.out.println(entity + " " + entity.getArea());
-            }
-
-            @Override
-            public void chartMouseMoved(ChartMouseEvent e) {
-            }
-        });
 
         frame.getContentPane().add(chartPanel, BorderLayout.CENTER);
     }
@@ -165,6 +181,14 @@ public class UIMain {
 
         String rsiLabelTitle = "RSI RETRIEVAL ERROR";
         if (bds != null) {
+            String basisReturnLabelTitle = "Basis return: " +
+                    Util.formatDouble(bds.basisReturn(), 2) + "%";
+            basisReturnLabel.setText(basisReturnLabelTitle);
+
+            String predictionsReturnLabelTitle = "Predictions return: " +
+                    Util.formatDouble(bds.predictionsReturn(), 2) + "%";
+            predictionsReturnLabel.setText(predictionsReturnLabelTitle);
+
             double rsi = bds.getBarDataPoint(bds.getBarCount() - 1).rsi;
             rsiLabelTitle = "RSI: " + Util.formatDouble(rsi, 2);
             rsiLabel.setText(rsiLabelTitle);
@@ -183,16 +207,29 @@ public class UIMain {
      */
     public void refresh() {
         BarDataSeries bds = State.getDisplayBDS();
-        refreshUIDynamicElements(bds);
-
         // NN CODE EXAMPLE:
         try {
-            NNModel model = State.nnModelForDisplayBDS();
-            double[] input = new double[] {53.0, -2., -0.2, 0.1, 0.1, 4000, 26.31, 0.11};
-            System.out.println("Prediction on input: " + model.predict(input));
+//            NNModel model = State.nnModelForDisplayBDS();
+            NNModel model = new NNModel(CBProduct.BTCUSD, CBTimeGranularity.HOUR);
+//            double[] input = new double[] {53.0, 2, -0.2, 0.1, 0.1, 4000, 26.31, 0.11};
+//            System.out.println("Prediction on input: " + model.predict(input));
+            for (int i = 0; i < bds.getBarCount(); i++) {
+                BarDataPoint bdpI = bds.getBarDataPoint(i);
+                BarAction predictedBarAction = model.predict(bdpI.neuralNetworkInputs());
+                if (i < 20) predictedBarAction = BarAction.HOLD; // Calculated indicator values aren't correct for first 20 values due to them depending on previous 20 values
+                bds.getBarDataPoint(i).tradesPredicted.add(
+                        new Trade(bdpI.bar.getBeginTime().toEpochSecond() * 1000,  //  TODO: end time?
+                                bdpI.bar.getClosePrice().doubleValue(),
+                                predictedBarAction)
+                );
+                // TODO: add predictions in between for last bar and previous bars that occured with app running, not only on current price
+            }
+
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.out.println("Exception in refresh: " + e.getMessage());
         }
+
+        refreshUIDynamicElements(bds);
     }
 
     /**

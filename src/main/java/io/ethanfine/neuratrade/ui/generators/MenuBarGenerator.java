@@ -66,7 +66,7 @@ public class MenuBarGenerator implements ActionListener {
         fileChooser.setAcceptAllFileFilterUsed(false);
         if (fileChooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
             BarDataSeries bdsToWrite = State.getDisplayBDS();
-            String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+            String filePath = fileChooser.getSelectedFile().getAbsolutePath() + ".csv";
             CSVIO.writeBarDataSeriesToFile(bdsToWrite, filePath);
             String successMessage = "Exported current bar data series to " + filePath + ".";
             // TODO: find out why a second file chooser is appearing; also remove file type chooser.
