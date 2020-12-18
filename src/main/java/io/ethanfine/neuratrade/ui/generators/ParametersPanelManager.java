@@ -18,6 +18,7 @@ public class ParametersPanelManager implements ActionListener {
     UIMain ui;
     JPanel parametersPanel;
     JButton switchToLiveButton;
+    public JCheckBox predictionsToggler;
     JComboBox productSelector;
     JComboBox barCountSelector;
     JComboBox granularitySelector;
@@ -46,12 +47,15 @@ public class ParametersPanelManager implements ActionListener {
         parametersPanel = new JPanel();
         parametersPanel.setPreferredSize(new Dimension(400, 40));
         ui.frame.getContentPane().add(parametersPanel, BorderLayout.SOUTH);
+        predictionsToggler = new JCheckBox("Display Predictions");
+        predictionsToggler.addActionListener(this);
+        parametersPanel.add(predictionsToggler);
         productSelector = loadParametersPanelSelector(CBProduct.values(), Config.shared.product);
-        parametersPanel.add(productSelector, BorderLayout.WEST);
+        parametersPanel.add(productSelector);
         barCountSelector = loadParametersPanelSelector(ChartBarCount.values(), Config.shared.chartBarCount);
-        parametersPanel.add(barCountSelector, BorderLayout.CENTER);
+        parametersPanel.add(barCountSelector);
         granularitySelector = loadParametersPanelSelector(CBTimeGranularity.values(), Config.shared.timeGranularity);
-        parametersPanel.add(granularitySelector, BorderLayout.EAST);
+        parametersPanel.add(granularitySelector);
         switchToLiveButton = new JButton("Switch to live data");
         switchToLiveButton.addActionListener(this);
         switchToLiveButton.setVisible(false);
@@ -92,7 +96,9 @@ public class ParametersPanelManager implements ActionListener {
      */
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (e.getSource() == productSelector) {
+        if (e.getSource() == predictionsToggler) {
+            Config.shared.userSelectedDisplayPredictions = predictionsToggler.isSelected();
+        } else if (e.getSource() == productSelector) {
             Config.shared.product = (CBProduct) productSelector.getSelectedItem();
         } else if (e.getSource() == barCountSelector) {
             Config.shared.chartBarCount = (ChartBarCount) barCountSelector.getSelectedItem();

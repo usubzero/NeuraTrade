@@ -1,27 +1,15 @@
 package io.ethanfine.neuratrade.ui;
 
-import ai.djl.translate.TranslateException;
 import io.ethanfine.neuratrade.Config;
 import io.ethanfine.neuratrade.coinbase.CBPublicData;
-import io.ethanfine.neuratrade.coinbase.models.CBProduct;
-import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
-import io.ethanfine.neuratrade.data.models.BarAction;
-import io.ethanfine.neuratrade.data.models.BarDataPoint;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
-import io.ethanfine.neuratrade.data.models.Trade;
-import io.ethanfine.neuratrade.neural_network.NNModel;
 import io.ethanfine.neuratrade.ui.generators.InputsChartGenerator;
 import io.ethanfine.neuratrade.ui.generators.MenuBarGenerator;
 import io.ethanfine.neuratrade.ui.generators.ParametersPanelManager;
 import io.ethanfine.neuratrade.util.Util;
-import org.jfree.chart.ChartMouseEvent;
-import org.jfree.chart.ChartMouseListener;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.entity.ChartEntity;
 import org.ta4j.core.BarSeries;
-import org.ta4j.core.indicators.RSIIndicator;
-import org.ta4j.core.indicators.helpers.ClosePriceIndicator;
 
 import javax.swing.*;
 
@@ -71,6 +59,8 @@ public class UIMain {
 
         loadLabels(bds);
         parametersPanelManager = new ParametersPanelManager(this);
+        parametersPanelManager.predictionsToggler.setEnabled(State.canDisplayPredictions(bds));
+        parametersPanelManager.predictionsToggler.setSelected(State.shouldDisplayPredictions(bds));
         initiateInputChartsPanel(bds);
 
         beginRefreshCycle();
@@ -114,23 +104,24 @@ public class UIMain {
         rsiLabel.setVerticalTextPosition(JLabel.BOTTOM);
         rsiLabel.setHorizontalTextPosition(JLabel.CENTER);
 
-        sideLabelsPanel.add(rsiLabel, BorderLayout.SOUTH);
+        sideLabelsPanel.add(rsiLabel);
     }
 
     // TODO: doc
     private void loadLabels(BarDataSeries bds) {
         sideLabelsPanel = new JPanel();
+        sideLabelsPanel.setLayout(new BoxLayout(sideLabelsPanel, BoxLayout.Y_AXIS));
         frame.add(sideLabelsPanel, BorderLayout.EAST);
 
-        basisReturnLabel = new JLabel("Basis return: " + bds.basisReturn() + "%");
+        basisReturnLabel = new JLabel(returnLabelTitle("Basis", bds.basisReturn()));
         basisReturnLabel.setVerticalTextPosition(JLabel.BOTTOM);
         basisReturnLabel.setHorizontalTextPosition(JLabel.CENTER);
-        sideLabelsPanel.add(basisReturnLabel, BorderLayout.NORTH);
+        sideLabelsPanel.add(basisReturnLabel);
 
-        predictionsReturnLabel = new JLabel("Predictions return: " + bds.predictionsReturn() + "%");
+        predictionsReturnLabel = new JLabel(returnLabelTitle("Predictions", bds.predictionsReturn()));
         predictionsReturnLabel.setVerticalTextPosition(JLabel.BOTTOM);
         predictionsReturnLabel.setHorizontalTextPosition(JLabel.CENTER);
-        sideLabelsPanel.add(predictionsReturnLabel, BorderLayout.CENTER);
+        sideLabelsPanel.add(predictionsReturnLabel);
 
         loadTickerPriceLabel();
         loadRSILabel(bds);
@@ -144,16 +135,10 @@ public class UIMain {
      * @param barDataSeries The BarDataSeries to base the data off to create the chart.
      */
     private void initiateInputChartsPanel(BarDataSeries barDataSeries) {
-//        AbstractXYDataset priceDataset = DataSetUtil.createPriceDataSet(barDataSeries);
-//        XYDataset labelsDataset = DataSetUtil.createTrainingChartDataset(barDataSeries);
-//        XYDataset fngDataset = DataSetUtil.createFNGDataset(barDataSeries);
-//        JFreeChart chart = createChart(barDataSeries, priceDataset, labelsDataset,  fngDataset, Config.shared.timeGranularity);
         if (barDataSeries == null)
             return;
 
-        if (chartPanel != null) {
-            frame.getContentPane().remove(chartPanel);
-        }
+        ChartPanel oldPanel = chartPanel;
         inputsChartGenerator = new InputsChartGenerator(barDataSeries);
         JFreeChart inputsChart = inputsChartGenerator.generateChart();
         chartPanel = new ChartPanel(inputsChart);
@@ -161,6 +146,9 @@ public class UIMain {
         chartPanel.setBackground(Color.WHITE);
 
         frame.getContentPane().add(chartPanel, BorderLayout.CENTER);
+        if (oldPanel != null) {
+            frame.getContentPane().remove(oldPanel);
+        }
     }
 
     /**
@@ -169,6 +157,9 @@ public class UIMain {
      * @param bds The BarDataSeries whose information should be displayed on the UI elements.
      */
     private void refreshUIDynamicElements(BarDataSeries bds) {
+        parametersPanelManager.predictionsToggler.setEnabled(State.canDisplayPredictions(bds));
+        parametersPanelManager.predictionsToggler.setSelected(State.shouldDisplayPredictions(bds));
+
         if (State.displayBDSisImported()) {
             // TODO: change to display file name of file from which data was imported
             priceLabel.setVisible(false);
@@ -181,21 +172,13 @@ public class UIMain {
 
         String rsiLabelTitle = "RSI RETRIEVAL ERROR";
         if (bds != null) {
-            String basisReturnLabelTitle = "Basis return: " +
-                    Util.formatDouble(bds.basisReturn(), 2) + "%";
-            basisReturnLabel.setText(basisReturnLabelTitle);
-
-            String predictionsReturnLabelTitle = "Predictions return: " +
-                    Util.formatDouble(bds.predictionsReturn(), 2) + "%";
-            predictionsReturnLabel.setText(predictionsReturnLabelTitle);
+            basisReturnLabel.setText(returnLabelTitle("Basis", bds.basisReturn()));
+            predictionsReturnLabel.setText(returnLabelTitle("Predictions", bds.predictionsReturn()));
 
             double rsi = bds.getBarDataPoint(bds.getBarCount() - 1).rsi;
             rsiLabelTitle = "RSI: " + Util.formatDouble(rsi, 2);
             rsiLabel.setText(rsiLabelTitle);
 
-            if (chartPanel != null) {
-                frame.remove(chartPanel);
-            }
             initiateInputChartsPanel(bds);
         }
 
@@ -207,27 +190,7 @@ public class UIMain {
      */
     public void refresh() {
         BarDataSeries bds = State.getDisplayBDS();
-        // NN CODE EXAMPLE:
-        try {
-//            NNModel model = State.nnModelForDisplayBDS();
-            NNModel model = new NNModel(CBProduct.BTCUSD, CBTimeGranularity.HOUR);
-//            double[] input = new double[] {53.0, 2, -0.2, 0.1, 0.1, 4000, 26.31, 0.11};
-//            System.out.println("Prediction on input: " + model.predict(input));
-            for (int i = 0; i < bds.getBarCount(); i++) {
-                BarDataPoint bdpI = bds.getBarDataPoint(i);
-                BarAction predictedBarAction = model.predict(bdpI.neuralNetworkInputs());
-                if (i < 20) predictedBarAction = BarAction.HOLD; // Calculated indicator values aren't correct for first 20 values due to them depending on previous 20 values
-                bds.getBarDataPoint(i).tradesPredicted.add(
-                        new Trade(bdpI.bar.getBeginTime().toEpochSecond() * 1000,  //  TODO: end time?
-                                bdpI.bar.getClosePrice().doubleValue(),
-                                predictedBarAction)
-                );
-                // TODO: add predictions in between for last bar and previous bars that occured with app running, not only on current price
-            }
-
-        } catch (Exception e) {
-            System.out.println("Exception in refresh: " + e.getMessage());
-        }
+        bds.labelTradePredictions(bds.timeGranularity.nnModel());
 
         refreshUIDynamicElements(bds);
     }
@@ -240,7 +203,7 @@ public class UIMain {
         new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(20000 );
+                    Thread.sleep(20000);
                     refresh();
                 } catch (Exception e) {
                     priceLabel.setText("PRICE RETRIEVAL ERROR");
@@ -248,6 +211,10 @@ public class UIMain {
                 }
             }
         }).start();
+    }
+
+    private String returnLabelTitle(String returnTitle, double returnPercentage) {
+        return returnTitle + " return: " + Util.formatDouble(returnPercentage, 2) + "%";
     }
 
 }

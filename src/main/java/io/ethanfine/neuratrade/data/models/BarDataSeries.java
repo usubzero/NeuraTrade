@@ -4,6 +4,7 @@ import io.ethanfine.neuratrade.Config;
 import io.ethanfine.neuratrade.coinbase.models.CBProduct;
 import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.external_data.FNGPublicData;
+import io.ethanfine.neuratrade.neural_network.NNModel;
 import org.ta4j.core.BarSeries;
 import org.ta4j.core.indicators.EMAIndicator;
 import org.ta4j.core.indicators.MACDIndicator;
@@ -254,6 +255,33 @@ public class BarDataSeries {
     }
 
     /**
+     * Add trades to the bars of the bar data array depending on whether model would have held, sold, or bought at each
+     * bar.
+     * @param model The model to base predictions on.
+     */
+    public void labelTradePredictions(NNModel model) {
+        try {
+            if (model != null) {
+                for (int i = 0; i < getBarCount(); i++) {
+                    BarDataPoint bdpI = getBarDataPoint(i);
+                    BarAction predictedBarAction = model.predict(bdpI.neuralNetworkInputs());
+                    if (i < 20) predictedBarAction = BarAction.HOLD;
+                    // Calculated indicator values aren't correct for first 20 values due to them depending on previous 20 values
+                    getBarDataPoint(i).tradesPredicted.add(
+                            new Trade(bdpI.bar.getBeginTime().toEpochSecond() * 1000,  //  TODO: end time?
+                                    bdpI.bar.getClosePrice().doubleValue(),
+                                    predictedBarAction)
+                    );
+                    // TODO: add predictions in between for last bar and previous bars that occured with app running, not only on current price
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("Exception in refresh: " + e.getMessage());
+        }
+    }
+
+    /**
      * Get all the BarDataPoints which match a certain filter.
      * @param filter The predicate that evaluates each bar data point when choosing to keep or remove it when filtering.
      * @return a list of BarDataPoints matching the predicate filter.
@@ -277,7 +305,7 @@ public class BarDataSeries {
         ArrayList<Trade> trades = new ArrayList<>();
         for (int i = 0; i < getBarCount(); i++) {
             BarDataPoint bdpI = getBarDataPoint(i);
-            ArrayList<Trade>  bdpBarActionTrades = new ArrayList<>(bdpI.tradesPredicted);
+            ArrayList<Trade> bdpBarActionTrades = new ArrayList<>(bdpI.tradesPredicted);
             bdpBarActionTrades.removeIf(trade -> trade.barAction != barAction);
             trades.addAll(bdpBarActionTrades);
         }

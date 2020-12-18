@@ -1,6 +1,7 @@
 package io.ethanfine.neuratrade.util;
 
 import ai.djl.translate.TranslateException;
+import io.ethanfine.neuratrade.Config;
 import io.ethanfine.neuratrade.coinbase.models.CBProduct;
 import io.ethanfine.neuratrade.coinbase.models.CBTimeGranularity;
 import io.ethanfine.neuratrade.data.models.BarAction;
@@ -51,13 +52,11 @@ public class CSVIO {
             int i = 0;
             BarSeries barSeries = new BaseBarSeriesBuilder().withName(product.productName).build();
             ArrayList<Pair<Double[], Pair<BarAction, BarAction>>> bdsSupplementalData = new ArrayList<>();
-            String csvCont = "";
             while ((line = bufferedReader.readLine()) != null) {
                 i++;
                 if (i == 1) {
                     continue;
                 }
-                csvCont += line + "\n";
                 String[] rawDataPoint = line.split(",");
                 long epochSeconds = Long.parseLong(rawDataPoint[0]);
                 ZonedDateTime zdtFromEpoch = ZonedDateTime.ofInstant(Instant.ofEpochSecond(epochSeconds), ZoneId.systemDefault());
@@ -128,14 +127,14 @@ public class CSVIO {
                             )
                     ); // TODO: intermediate trades
                 try {
-                    NNModel model = new NNModel(CBProduct.BTCUSD, CBTimeGranularity.MINUTE_FIFTEEN);
+                    NNModel model = bds.timeGranularity.nnModel();
+                    if (model == null) return bds;
                     String pyTorchPred = "";
                     if (predictedBarAction != null) {
                         pyTorchPred = ", Predicted (PyTorch): " + predictedBarAction;
                         if (model.predict(bdpI.neuralNetworkInputs()) == predictedBarAction)
                             nnImportCorrect++;
                     }
-//                    bdpI.barActionPredicted = model.predict(bdpI.neuralNetworkInputs());
                     System.out.println("Predicted (DJL): " + model.predict(bdpI.neuralNetworkInputs()) + pyTorchPred);
                 } catch (Exception e)  {
                     System.out.println(e.getMessage());

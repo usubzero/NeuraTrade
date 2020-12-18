@@ -9,6 +9,16 @@ public class Config {
 
     public static Config shared;
 
+    static {
+        shared = new Config();
+    }
+
+    /**
+     * Whether the user selected predictions should be displayed in the UI or not. Does not necessarily mean they can be
+     * displayed.
+     */
+    public boolean userSelectedDisplayPredictions = false;
+
     /**
      * Trade parameters
      */
@@ -20,8 +30,8 @@ public class Config {
      * Training data generation parameters.
      * BuySellMinVolatilities should be interpreted as percentages.
      */
-    public double minsTimeGranularityBuySellMinVolatility = 0.1;
-    public double minsFiveTimeGranularityBuySellMinVolatility = 0.3;
+    public double minsTimeGranularityBuySellMinVolatility = 0.5;
+    public double minsFiveTimeGranularityBuySellMinVolatility = 1;
     public double minsFifteenTimeGranularityBuySellMinVolatility = 2;
     public double hourTimeGranularityBuySellMinVolatility = 4;
     public double hourSixTimeGranularityBuySellMinVolatility = 6;
@@ -36,9 +46,5 @@ public class Config {
      * API parameters
      */
 //    public int tickerUpdatesPerSecond = 5;
-
-    static {
-        shared = new Config();
-    }
 
 }

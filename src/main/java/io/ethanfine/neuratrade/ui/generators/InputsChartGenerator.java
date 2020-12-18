@@ -91,7 +91,7 @@ public class InputsChartGenerator {
                 null, plot,
                 false
         );
-        chart.setTitle(barDataSeries.product.productName + " Training Data");
+        chart.setTitle(barDataSeries.product.productName);
         return chart;
     }
 

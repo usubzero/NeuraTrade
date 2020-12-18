@@ -1,6 +1,8 @@
 package io.ethanfine.neuratrade.coinbase.models;
 
 import io.ethanfine.neuratrade.Config;
+import io.ethanfine.neuratrade.neural_network.NNModel;
+import io.ethanfine.neuratrade.neural_network.NNModelManager;
 
 import java.util.HashMap;
 
@@ -34,6 +36,15 @@ public enum CBTimeGranularity {
     }
 
     /**
+     * This method gives the CBTimeGranularity that corresponds to timeGranularitySeconds seconds.
+     * @param timeGranularitySeconds seconds to match a CBTimeGranularity for.
+     * @return CBTimeGranularity representing timeGranularitySeconds seconds.
+     */
+    public static CBTimeGranularity from(int timeGranularitySeconds) {
+        return timeGranularityMap.get(timeGranularitySeconds);
+    }
+
+    /**
      * This method gives the minimum percent difference between any successive pair of buy and sell orders in
      * generating training data. This will be defined as the buySellMinVolatility.
      * @return buySellMinVolatility.
@@ -55,13 +66,15 @@ public enum CBTimeGranularity {
         }
     }
 
-    /**
-     * TODO: doc
-     * @param timeGranularitySeconds
-     * @return
-     */
-    public static CBTimeGranularity from(int timeGranularitySeconds) {
-        return timeGranularityMap.get(timeGranularitySeconds);
+    public NNModel nnModel() {
+        switch (this) {
+            case HOUR:
+                return NNModelManager.shared.hourModel;
+            case HOUR_SIX:
+                return NNModelManager.shared.sixHourModel;
+            default:
+                return null;
+        }
     }
 
 }
