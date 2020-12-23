@@ -27,7 +27,7 @@ public class CSVIO {
      * @param filePath the path of the file to read bar data from.
      * @return a BarDataSeries created from the bar data at a file located at filePath.
      */
-    public static BarDataSeries readFile(String filePath) {
+    public static BarDataSeries readFile(String filePath, long startEpoch, long endEpoch) {
         BufferedReader bufferedReader;
         try {
             bufferedReader = new BufferedReader(new FileReader(filePath));
@@ -59,6 +59,7 @@ public class CSVIO {
                 }
                 String[] rawDataPoint = line.split(",");
                 long epochSeconds = Long.parseLong(rawDataPoint[0]);
+                if (startEpoch > epochSeconds || endEpoch < epochSeconds) continue;
                 ZonedDateTime zdtFromEpoch = ZonedDateTime.ofInstant(Instant.ofEpochSecond(epochSeconds), ZoneId.systemDefault());
                 zdtFromEpoch = zdtFromEpoch.plusDays(1);
                 // TODO: check above line; epochSeconds is correct, conversion might not be
@@ -98,8 +99,7 @@ public class CSVIO {
                 }
             }
 
-            int nnImportCorrect = 0;
-            BarDataSeries bds = new BarDataSeries(product, barSeries, timeGranularity);
+            BarDataSeries bds = new BarDataSeries(product, barSeries, timeGranularity, true);
             for (int bdsI = 0; bdsI < bds.getBarCount(); bdsI++) {
                 Pair<Double[], Pair<BarAction, BarAction>> sdI = bdsSupplementalData.get(bdsI);
                 Double[] sddI = sdI.getKey();
@@ -125,22 +125,8 @@ public class CSVIO {
                                     bdpI.bar.getClosePrice().doubleValue(),
                                     predictedBarAction
                             )
-                    ); // TODO: intermediate trades
-                try {
-                    NNModel model = bds.timeGranularity.nnModel();
-                    if (model == null) return bds;
-                    String pyTorchPred = "";
-                    if (predictedBarAction != null) {
-                        pyTorchPred = ", Predicted (PyTorch): " + predictedBarAction;
-                        if (model.predict(bdpI.neuralNetworkInputs()) == predictedBarAction)
-                            nnImportCorrect++;
-                    }
-                    System.out.println("Predicted (DJL): " + model.predict(bdpI.neuralNetworkInputs()) + pyTorchPred);
-                } catch (Exception e)  {
-                    System.out.println(e.getMessage());
-                }
+                    ); // TODO: look into adding intermediate trades
             }
-            System.out.println("DJL accuracy: " + nnImportCorrect + " / " + bds.getBarCount());
 
             return bds;
         } catch (IOException e) {

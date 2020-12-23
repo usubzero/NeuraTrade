@@ -45,7 +45,9 @@ public class BarDataSeries {
     private LowPriceIndicator lowestPriceIndicator;
     private HighPriceIndicator highPriceIndicator;
 
-    public BarDataSeries(CBProduct product, BarSeries barSeries, CBTimeGranularity timeGranularity) {
+    private boolean isImported;
+
+    public BarDataSeries(CBProduct product, BarSeries barSeries, CBTimeGranularity timeGranularity, boolean isImported) {
         this.product = product;
         this.barDataArray = new ArrayList<>();
         this.timeGranularity = timeGranularity;
@@ -65,6 +67,8 @@ public class BarDataSeries {
         widthOfBBIndicator = new BollingerBandWidthIndicator(upperOfBBIndicator, basisOfBBIndicator, lowerOfBBIndicator);
         lowestPriceIndicator = new LowPriceIndicator(barSeries);
         highPriceIndicator = new HighPriceIndicator(barSeries);
+
+        this.isImported = isImported;
 
         mapBarsToBarDataPoints(barSeries);
         labelBarActions();
@@ -262,10 +266,18 @@ public class BarDataSeries {
     public void labelTradePredictions(NNModel model) {
         try {
             if (model != null) {
+                int lSell = -11;
                 for (int i = 0; i < getBarCount(); i++) {
                     BarDataPoint bdpI = getBarDataPoint(i);
                     BarAction predictedBarAction = model.predict(bdpI.neuralNetworkInputs());
-                    if (i < 20) predictedBarAction = BarAction.HOLD;
+                    int llSell = lSell;
+//                    if (i < 20) predictedBarAction = BarAction.HOLD;
+                    // TODO: calculate avg difference between predictive and basis for a bunch of random periods
+                    if (predictedBarAction == BarAction.SELL) lSell = i;
+                    if (i < 20 && !isImported) predictedBarAction = BarAction.HOLD;
+                    if (i - llSell <= 5 && predictedBarAction != BarAction.SELL) predictedBarAction = BarAction.HOLD;
+                    // TODO: isImported can't depend on state; must depend on this bds
+                    // TODO: maybe add element to chart to display that 20 first rendered bars can't display predictions if live data
                     // Calculated indicator values aren't correct for first 20 values due to them depending on previous 20 values
                     getBarDataPoint(i).tradesPredicted.add(
                             new Trade(bdpI.bar.getBeginTime().toEpochSecond() * 1000,  //  TODO: end time?
@@ -275,7 +287,6 @@ public class BarDataSeries {
                     // TODO: add predictions in between for last bar and previous bars that occured with app running, not only on current price
                 }
             }
-
         } catch (Exception e) {
             System.out.println("Exception in refresh: " + e.getMessage());
         }
@@ -301,6 +312,16 @@ public class BarDataSeries {
     }
 
     // TODO: doc
+    public BarAction mostRecentBarAction() {
+        int barCount = getBarCount();
+        if (barCount < 1) return null;
+        BarDataPoint bdpLast = getBarDataPoint(barCount - 1);
+        int bdpLastTradeCount = bdpLast.tradesPredicted.size();
+        if (bdpLastTradeCount < 1) return null;
+        return bdpLast.tradesPredicted.get(bdpLastTradeCount - 1).barAction;
+    }
+
+    // TODO: doc
     public ArrayList<Trade> tradesForPredictedBarAction(BarAction barAction) {
         ArrayList<Trade> trades = new ArrayList<>();
         for (int i = 0; i < getBarCount(); i++) {
@@ -314,12 +335,12 @@ public class BarDataSeries {
 
     // TODO: doc
     public double basisReturn() {
-        if (barDataArray.size() >= 2) {
-            double open = barDataArray.get(0).bar.getOpenPrice().doubleValue();
-            double close = barDataArray.get(barDataArray.size() - 1).bar.getClosePrice().doubleValue();
-            return (close - open) / open * 100;
-        }
-        return 0;
+        int minBarCount = isImported ? 2 : 22;
+        if (barDataArray.size() < minBarCount) return 0;
+        double open = barDataArray.get(minBarCount - 2).bar.getOpenPrice().doubleValue();
+        // first 20 BDPs have inaccurate indicator values due to them depending on previous values
+        double close = barDataArray.get(barDataArray.size() - 1).bar.getClosePrice().doubleValue();
+        return (close - open) / open * 100;
     }
 
     // TODO: doc
@@ -327,8 +348,8 @@ public class BarDataSeries {
         if (barDataArray.size() >= 2) {
             ArrayList<Trade> buyTrades = tradesForPredictedBarAction(BarAction.BUY);
             ArrayList<Trade> sellTrades = tradesForPredictedBarAction(BarAction.SELL);
-            int buyTradesI = 0;
-            int sellTradesI = 0;
+//            int buyTradesI = 0;
+//            int sellTradesI = 0;
             double investmentVal = 1;
             boolean holding = false;
             Trade lBuyTrade = null;

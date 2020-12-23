@@ -10,40 +10,56 @@ import org.ta4j.core.BarSeries;
 
 public class State {
 
+    public enum DataType {
+        LIVE,
+        IMPORTED,
+        HISTORIC
+    }
+
+    private static DataType currentDataType;
+
     /**
      * The bar data series that should be displayed in the GUI.
      */
     public static BarDataSeries currentBDS;
     /**
-     * The bar data series imported from a file that should be displayed in the GUI. null if recent bar data series
-     * should be displayed instead.
+     * The bar data series imported from a file that should be displayed in the GUI. null if historic or live data should
+     * be displayed instead.
      */
-    private static BarDataSeries importedBDS;
+//    private static BarDataSeries importedBDS;
 
     static {
-        currentBDS = getRecentBarDataSeries();
-        importedBDS = null;
+        currentBDS = null;
+        currentDataType = DataType.LIVE;
+//        currentBDS = getRecentBarDataSeries();
+//        importedBDS = null;
     }
 
     /**
      * The bar data series that should be displayed in the GUI.
      * @return bar data series to display in GUI.
      */
+//    public static BarDataSeries getDisplayBDS() {
+//        if (importedBDS == null) {
+//            return getRecentBarDataSeries();
+//        } else {
+//            return importedBDS;
+//        }
+//    }
     public static BarDataSeries getDisplayBDS() {
-        if (importedBDS == null) {
-            return getRecentBarDataSeries();
-        } else {
-            return importedBDS;
+        if (currentDataType == DataType.LIVE) {
+            currentBDS = getRecentBarDataSeries();
         }
+        return currentBDS;
     }
 
     /**
      * Whether the bar data series returned by getDisplayBDS() is imported or not.
      * @return true if the bar data series returned by getDisplayBDS() is imported.
      */
-    public static boolean displayBDSisImported() {
-        return importedBDS != null;
-    }
+//    public static boolean displayBDSisImported() {
+//        return importedBDS != null;
+//    }
 
     /**
      * Retrieves the recent bar series for the product in Config, with the chart bar count in Config, and the time
@@ -73,9 +89,14 @@ public class State {
             return new BarDataSeries(
                     Config.shared.product,
                     barSeries,
-                    Config.shared.timeGranularity
+                    Config.shared.timeGranularity,
+                    false
             );
         }
+    }
+
+    public static DataType getCurrentDataType() {
+        return currentDataType;
     }
 
     /**
@@ -83,8 +104,12 @@ public class State {
      * @param bds The bar data series that should be displayed by the GUI. Should be null to specify that the GUI should
      * display the most recent bar data series.
      */
-    public static void setImportedBDS(BarDataSeries bds) {
-        importedBDS = bds;
+//    public static void setImportedBDS(BarDataSeries bds) {
+//        importedBDS = bds;
+//    }
+    public static void setCurrentBDS(BarDataSeries bds, DataType dataType) {
+        currentDataType = dataType;
+        currentBDS = bds;
     }
 
     public static boolean canDisplayPredictions(BarDataSeries bds) {

@@ -71,8 +71,8 @@ public class DataSetUtil {
                 pBuySeries.add(t.epoch, t.price);
             for (Trade t : pSellTrades)
                 pSellSeries.add(t.epoch, t.price);
-            dataset.addSeries(pBuySeries);
             dataset.addSeries(pSellSeries);
+            dataset.addSeries(pBuySeries);
         }
 
         return dataset;

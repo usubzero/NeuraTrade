@@ -13,6 +13,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.util.Calendar;
 
 public class MenuBarGenerator implements ActionListener {
 
@@ -52,8 +53,9 @@ public class MenuBarGenerator implements ActionListener {
         FileNameExtensionFilter fileFilter = new FileNameExtensionFilter("CSV files (*csv)","csv");
         fileChooser.setFileFilter(fileFilter);
         if  (fileChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-            BarDataSeries bdsFromCSV = CSVIO.readFile(fileChooser.getSelectedFile().getAbsolutePath());
-            State.setImportedBDS(bdsFromCSV);
+            BarDataSeries bdsFromCSV = CSVIO.readFile(fileChooser.getSelectedFile().getAbsolutePath(), 0, Calendar.getInstance().getTimeInMillis());
+            State.setCurrentBDS(bdsFromCSV, State.DataType.IMPORTED);
+//            State.setImportedBDS(bdsFromCSV);
             ui.refresh();
         }
     }
@@ -83,7 +85,7 @@ public class MenuBarGenerator implements ActionListener {
             File[] selectedFiles = fileChooser.getSelectedFiles();
             for (int i = 0; i < selectedFiles.length; i++) {
                 String filePath = selectedFiles[i].getAbsolutePath();
-                BarDataSeries bdsFromCSV = CSVIO.readFile(selectedFiles[i].getAbsolutePath());
+                BarDataSeries bdsFromCSV = CSVIO.readFile(selectedFiles[i].getAbsolutePath(), 0, Calendar.getInstance().getTimeInMillis());
                 String filePathNoExt = FilenameUtils.removeExtension(filePath);
                 String writeFilePath = filePathNoExt + ",TDATA.csv";
                 System.out.println(bdsFromCSV);

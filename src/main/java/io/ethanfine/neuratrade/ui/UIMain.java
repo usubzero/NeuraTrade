@@ -2,11 +2,14 @@ package io.ethanfine.neuratrade.ui;
 
 import io.ethanfine.neuratrade.Config;
 import io.ethanfine.neuratrade.coinbase.CBPublicData;
+import io.ethanfine.neuratrade.data.models.BarAction;
 import io.ethanfine.neuratrade.data.models.BarDataSeries;
 import io.ethanfine.neuratrade.ui.generators.InputsChartGenerator;
 import io.ethanfine.neuratrade.ui.generators.MenuBarGenerator;
 import io.ethanfine.neuratrade.ui.generators.ParametersPanelManager;
+import io.ethanfine.neuratrade.util.CSVIO;
 import io.ethanfine.neuratrade.util.Util;
+import org.jdesktop.swingx.JXDatePicker;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
 import org.ta4j.core.BarSeries;
@@ -14,6 +17,9 @@ import org.ta4j.core.BarSeries;
 import javax.swing.*;
 
 import java.awt.*;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 public class UIMain {
 
@@ -24,6 +30,9 @@ public class UIMain {
     JLabel rsiLabel;
     JLabel basisReturnLabel;
     JLabel predictionsReturnLabel;
+    JLabel predictionLabel;
+//    JXDatePicker startDatePicker;
+//    JXDatePicker endDatePicker;
     ParametersPanelManager parametersPanelManager;
     InputsChartGenerator inputsChartGenerator;
 
@@ -53,7 +62,8 @@ public class UIMain {
             bds = new BarDataSeries(
                     Config.shared.product,
                     recentBarSeries,
-                    Config.shared.timeGranularity
+                    Config.shared.timeGranularity,
+                    false
             );
         }
 
@@ -113,15 +123,31 @@ public class UIMain {
         sideLabelsPanel.setLayout(new BoxLayout(sideLabelsPanel, BoxLayout.Y_AXIS));
         frame.add(sideLabelsPanel, BorderLayout.EAST);
 
+        predictionLabel = new JLabel(predictionLabelTitle(bds));
+        predictionLabel.setVisible(State.shouldDisplayPredictions(bds));
+        predictionLabel.setVerticalTextPosition(JLabel.BOTTOM);
+        predictionLabel.setHorizontalTextPosition(JLabel.CENTER);
+        sideLabelsPanel.add(predictionLabel);
+
         basisReturnLabel = new JLabel(returnLabelTitle("Basis", bds.basisReturn()));
         basisReturnLabel.setVerticalTextPosition(JLabel.BOTTOM);
         basisReturnLabel.setHorizontalTextPosition(JLabel.CENTER);
         sideLabelsPanel.add(basisReturnLabel);
 
         predictionsReturnLabel = new JLabel(returnLabelTitle("Predictions", bds.predictionsReturn()));
+        predictionsReturnLabel.setVisible(State.shouldDisplayPredictions(bds));
         predictionsReturnLabel.setVerticalTextPosition(JLabel.BOTTOM);
         predictionsReturnLabel.setHorizontalTextPosition(JLabel.CENTER);
         sideLabelsPanel.add(predictionsReturnLabel);
+
+//        startDatePicker = new JXDatePicker();
+//        startDatePicker.setDate(Calendar.getInstance().getTime());
+//        startDatePicker.setFormats(new SimpleDateFormat("MM/dd/yyyy"));
+//        sideLabelsPanel.add(startDatePicker);
+//        endDatePicker = new JXDatePicker();
+//        endDatePicker.setDate(Calendar.getInstance().getTime());
+//        endDatePicker.setFormats(new SimpleDateFormat("MM/dd/yyyy"));
+//        sideLabelsPanel.add(endDatePicker);
 
         loadTickerPriceLabel();
         loadRSILabel(bds);
@@ -160,8 +186,13 @@ public class UIMain {
         parametersPanelManager.predictionsToggler.setEnabled(State.canDisplayPredictions(bds));
         parametersPanelManager.predictionsToggler.setSelected(State.shouldDisplayPredictions(bds));
 
-        if (State.displayBDSisImported()) {
-            // TODO: change to display file name of file from which data was imported
+//        State.DataType currentDataType = State.getCurrentDataType();
+//        if (currentDataType == State.DataType.LIVE) {
+//            priceLabel.setText(tickerPriceLabelTitle());
+//            priceLabel.setVisible(true);
+//            rsiLabel.setVisible(true);
+//        }
+        if (State.getCurrentDataType() != State.DataType.LIVE) {
             priceLabel.setVisible(false);
             rsiLabel.setVisible(false);
         } else {
@@ -171,9 +202,13 @@ public class UIMain {
         }
 
         String rsiLabelTitle = "RSI RETRIEVAL ERROR";
-        if (bds != null) {
+        if (bds != null && bds.getBarCount() != 0) {
             basisReturnLabel.setText(returnLabelTitle("Basis", bds.basisReturn()));
             predictionsReturnLabel.setText(returnLabelTitle("Predictions", bds.predictionsReturn()));
+            predictionsReturnLabel.setVisible(State.shouldDisplayPredictions(bds));
+
+            predictionLabel.setText(predictionLabelTitle(bds));
+            predictionLabel.setVisible(State.shouldDisplayPredictions(bds));
 
             double rsi = bds.getBarDataPoint(bds.getBarCount() - 1).rsi;
             rsiLabelTitle = "RSI: " + Util.formatDouble(rsi, 2);
@@ -191,19 +226,26 @@ public class UIMain {
     public void refresh() {
         BarDataSeries bds = State.getDisplayBDS();
         bds.labelTradePredictions(bds.timeGranularity.nnModel());
+//        Date startPickerDate = (Date) startDatePicker.getEditor().getValue();
+//        long startDate = startPickerDate.toInstant().getEpochSecond();
+//        Date endPickerDate = (Date) endDatePicker.getEditor().getValue();
+//        long endDate = endPickerDate.toInstant().getEpochSecond();
+//        bds = CSVIO.readFile("historic_data/BTC-USD,21600.csv", startDate, endDate);
+//        bds.labelTradePredictions(bds.timeGranularity.nnModel());
+//        State.setCurrentBDS(bds, State.DataType.HISTORIC);
+//        State.setImportedBDS(bds); // TODO: live data at first; switch to viewing range
 
         refreshUIDynamicElements(bds);
     }
 
     /**
-     * Create a thread which sleeps other than every 20 seconds, when it is awake simply to refresh the dynamic elements
-     * of the UI.
+     * Create a thread which sleeps other than every 20 seconds, when it is awake simply to call refresh().
      */
     private void beginRefreshCycle() {
         new Thread(() -> {
             while (true) {
                 try {
-                    Thread.sleep(20000);
+                    Thread.sleep(5000);
                     refresh();
                 } catch (Exception e) {
                     priceLabel.setText("PRICE RETRIEVAL ERROR");
@@ -211,6 +253,12 @@ public class UIMain {
                 }
             }
         }).start();
+    }
+
+    private String predictionLabelTitle(BarDataSeries bds) {
+        BarAction predBarAction = bds.mostRecentBarAction();
+        if (predBarAction == null) return "Unable to predict best move.";
+        return "Predicted best move: " + predBarAction.toString();
     }
 
     private String returnLabelTitle(String returnTitle, double returnPercentage) {
