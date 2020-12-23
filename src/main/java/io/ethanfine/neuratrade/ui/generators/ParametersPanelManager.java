@@ -64,9 +64,6 @@ public class ParametersPanelManager implements ActionListener {
         parametersPanel.add(barCountSelector);
         granularitySelector = loadParametersPanelSelector(CBTimeGranularity.values(), Config.shared.timeGranularity);
         parametersPanel.add(granularitySelector);
-        toggleLiveHistoricButton = new JButton("Switch to historic BTC data");
-        toggleLiveHistoricButton.addActionListener(this);
-        parametersPanel.add(toggleLiveHistoricButton, BorderLayout.CENTER);
         startDatePicker = new JXDatePicker();
         Calendar startCalendar = Calendar.getInstance();
         startCalendar.add(Calendar.MONTH, -1);
@@ -81,6 +78,9 @@ public class ParametersPanelManager implements ActionListener {
         endDatePicker.setVisible(false);
         endDatePicker.addActionListener(this);
         parametersPanel.add(endDatePicker);
+        toggleLiveHistoricButton = new JButton("Switch to historic BTC data");
+        toggleLiveHistoricButton.addActionListener(this);
+        parametersPanel.add(toggleLiveHistoricButton, BorderLayout.CENTER);
     }
 
     /**
