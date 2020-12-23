@@ -59,10 +59,10 @@ public class CSVIO {
                 }
                 String[] rawDataPoint = line.split(",");
                 long epochSeconds = Long.parseLong(rawDataPoint[0]);
+                // TODO: verify epochSeconds; irrelevant for predictions however since epoch is not an input
                 if (startEpoch > epochSeconds || endEpoch < epochSeconds) continue;
                 ZonedDateTime zdtFromEpoch = ZonedDateTime.ofInstant(Instant.ofEpochSecond(epochSeconds), ZoneId.systemDefault());
                 zdtFromEpoch = zdtFromEpoch.plusDays(1);
-                // TODO: check above line; epochSeconds is correct, conversion might not be
                 double open = Double.parseDouble(rawDataPoint[1]);
                 double high = Double.parseDouble(rawDataPoint[2]);
                 double low = Double.parseDouble(rawDataPoint[3]);
